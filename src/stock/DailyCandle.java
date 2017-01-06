@@ -1,42 +1,38 @@
 package stock;
 
-import org.joda.time.DateTime;
-
 /**
  * Class for a daily candle from Yahoo's data.
  * @author jimmyzzxhlh-Dell
  *
  */
-public class DailyCandle extends AbstractCandle {
+public class DailyCandle extends AbstractCandle<DailyCandle> {
     
-    /**
-     * Constructor given the adjusted close. This is for stock splitting. A stock can have multiple
-     * splits. See AAPL for an example.
-     */
-    public DailyCandle(DateTime instant, double open, double close, double high, double low, long volume, double adjClose) {
-        super(instant, open, close, high, low, volume);
-        //Use the adjusted close price to calculate the rest.
-        double ratio = adjClose / close;
+	public DailyCandle() {
+		
+	}
+	
+	/**
+	 * Set adjusted close. Adjusted close can be different from close price if the stock has been splited before. 
+	 * This function MUST be called after open, high, low, close are set. 
+	 */
+	public void setAdjClose(double adjClose) {
+		double ratio = adjClose / close;
         open *= ratio;
-        close = adjClose;
         high *= ratio;
-        low *= ratio;        
-    }
-    
-    public DailyCandle(DateTime instant, double open, double close, double high, double low, long volume) {
-        super(instant, open, close, high, low, volume);
-    }
-    
+        low *= ratio;
+        close = adjClose;        
+	}
+	
     @Override
     public DailyCandle copy() {
-        DailyCandle candle = new DailyCandle(
-                this.dateTime,
-                this.open,
-                this.close,
-                this.high, 
-                this.low, 
-                this.volume);
-        return candle;
+    	DailyCandle candle = new DailyCandle()
+    			.withDateTime(this.dateTime)
+    			.withOpen(this.open)
+    			.withHigh(this.high)
+    			.withLow(this.low)
+    			.withClose(this.close)
+    			.withVolume(this.volume);
+    	return candle;
     }
         
 }

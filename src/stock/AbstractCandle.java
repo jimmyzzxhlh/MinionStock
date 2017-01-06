@@ -9,7 +9,7 @@ import stock.StockEnum.StockCandleDataType;
  * @author jimmyzzxhlh-Dell
  *
  */
-public abstract class AbstractCandle {
+public abstract class AbstractCandle<T extends AbstractCandle<T>> {
     protected double open;
     protected double close;
     protected double high;
@@ -17,13 +17,8 @@ public abstract class AbstractCandle {
     protected long volume;
     protected DateTime dateTime;  //The instant will be assumed to be UTC time. This is intentional so that it is easier and consistent to implement.
         
-    protected AbstractCandle(DateTime dateTime, double open, double close, double high, double low, long volume) {
-        this.dateTime = dateTime;
-        this.open = open;
-        this.close = close;
-        this.high = high;
-        this.low = low;
-        this.volume = volume;
+    protected AbstractCandle() {
+    	
     }
     
     public DateTime getDateTime()   { return dateTime; }
@@ -33,10 +28,17 @@ public abstract class AbstractCandle {
     public double getLow()          { return low;     }
     public long getVolume()         { return volume;  }
     
+    public T withDateTime(DateTime dateTime) { this.dateTime = dateTime; return (T) this; }
+    public T withOpen(double open)           { this.open = open; return (T) this; }
+    public T withClose(double close)         { this.close = close; return (T) this; }
+    public T withHigh(double high)           { this.high = high; return (T) this; }
+    public T withLow(double low)             { this.low = low; return (T) this; }
+    public T withVolume(long volume)         { this.volume = volume; return (T) this; }
+    
     /**
      * Child class should implement a deep copy function.
      */
-    public abstract <T extends AbstractCandle> T copy();
+    public abstract T copy();
     
     /**
      * Get the specific price (open, close, high, low)

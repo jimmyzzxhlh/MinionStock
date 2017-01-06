@@ -15,7 +15,7 @@ import stock.StockEnum.StockCandleDataType;
  * This class shouldn't be specific to daily candles or intraday candles. Whether or not it represents daily candles
  * or intraday candles should be determined by the actual StockCandle objects inside the list. 
  */
-public class CandleList<T extends AbstractCandle> {
+public class CandleList<T extends AbstractCandle<T>> {
     protected List<T> candles;
     protected Map<DateTime, T> dateTimeMap;
     protected Company company;
@@ -75,7 +75,7 @@ public class CandleList<T extends AbstractCandle> {
     public DateTime getDateTime(int index)    { return candles.get(index).getDateTime(); }
     public double getTurnoverRate(int index)  { return candles.get(index).getVolume() / getOutstandingShares(); }
     
-    public double getClose(DateTime date) { return getClose(getDateIndex(date)); }
+    public double getClose(DateTime dateTime) { return getCandle(dateTime).getClose(); }
     public double getHigh()           { return high;   }
     public double getLow()            { return low;    }
     public long getVolume()           { return volume; }
@@ -117,10 +117,18 @@ public class CandleList<T extends AbstractCandle> {
         return (getUpperShadowLength() >= getLowerShadowLength());
     }
     
+    /**
+     * Return true if the candle list as a whole is a white candle, i.e. Close price of the last candle
+     * is higher or equal to the open price of the first candle.  
+     */
     public boolean isWhite() {
         return (getClose() > getOpen());
     }
     
+    /**
+     * Return true if the candle list as a whole is a black candle, i.e. Close price of the last candle
+     * is lower than the open price of the first candle.  
+     */
     public boolean isBlack() {
         return (getClose() < getOpen());
     }
@@ -134,6 +142,9 @@ public class CandleList<T extends AbstractCandle> {
         normalizeCandle(maxForNormalization, 0, candles.size() - 1);
     }
     
+    /**
+     * Normalize the candles so that the highest price is equal to maxForNormalization.
+     */
     public void normalizeCandle(double maxForNormalization, int start, int end) {
         T candle;
         double max = 0;
@@ -142,12 +153,8 @@ public class CandleList<T extends AbstractCandle> {
         if ((start < 0) || (end >= candles.size())) return;
         for (int i = start; i <= end; i++) {
             candle = candles.get(i);
-            if (candle.low < min) {
-                min = candle.low;
-            }
-            if (candle.high > max) {
-                max = candle.high;
-            }
+            min = Double.min(min, candle.low);
+            max = Double.max(max, candle.high);
         }
         scale = maxForNormalization / (max - min);
         for (int i = 0; i < candles.size(); i++) {
@@ -157,17 +164,6 @@ public class CandleList<T extends AbstractCandle> {
             candle.high = (candle.high - min) * scale;
             candle.low = (candle.low - min) * scale;            
         }        
-    }
-    
-    public void normalizeCandle(double maxForNormalization, double min, double max, int start, int end) {
-        double scale = maxForNormalization / (max - min);
-        for (int i = 0; i < candles.size(); i++) {
-            AbstractCandle candle = candles.get(i);
-            candle.open = (candle.open - min) * scale;
-            candle.close = (candle.close - min) * scale;
-            candle.high = (candle.high - min) * scale;
-            candle.low = (candle.low - min) * scale;            
-        }    
     }
     
     /**
@@ -183,89 +179,52 @@ public class CandleList<T extends AbstractCandle> {
     }
     
     /**
-     * Get the maximum stock price during a time range, defined by the current day (index)
-     * and the number of days to look forward.
-     * @param index The subscript in the stock candle array that represents the current day.
-     * @param days Number of days to look forward.
+     * Get the maximum stock price during a time range, defined by the current index
+     * and the number of candles to look forward.
+     * @param index The index of the first candle.
+     * @param count Number of candles to look forward.
      * @param dataType Type of data to look at (open, close, etc.).
      * @return See description. If nothing can be returned, then return 0.
      */
-    public double getMaxPrice(int index, int days, StockCandleDataType dataType) {
-        if (index + days - 1 >= candles.size()) return 0;
-        double result = 0;
-        for (int i = index; i < index + days; i++) {
-            double currentPrice = candles.get(i).getStockPrice(dataType);
-            if (currentPrice > result) result = currentPrice;
+    public double getMaxPrice(int index, int count, StockCandleDataType dataType) {
+        if (index + count - 1 >= candles.size()) return 0;  //TODO - Should log an error.
+        
+        double max = 0;
+        for (int i = index; i < index + count; i++) {
+            max = Double.max(max, candles.get(i).getStockPrice(dataType));
         }
-        return result;        
+        return max;        
     }
-
     
     /**
-     * Get the minimum stock price during a time range, defined by the current day (index)
-     * and the number of days to look forward.
-     * @param index The subscript in the stock candle array that represents the current day.
-     * @param days Number of days to look forward.
+     * Get the minimum stock price during a time range, defined by the current index
+     * and the number of candles to look forward.
+     * @param index The index of the first candle.
+     * @param count Number of candles to look forward.
      * @param dataType Type of data to look at (open, close, etc.).
      * @return See description. If nothing can be returned, then return 0.
      */
-    public double getMinPrice(int index, int days, StockCandleDataType dataType) {
-        if (index + days - 1 >= candles.size()) return 0;
-        double result = 0;
-        for (int i = index; i < index + days; i++) {
-            double currentPrice = candles.get(i).getStockPrice(dataType);
-            if ((result == 0) || (currentPrice < result)) result = currentPrice;
+    public double getMinPrice(int index, int count, StockCandleDataType dataType) {
+        if (index + count - 1 >= candles.size()) return 0;  //TODO - should log an error.
+        double min = 0;
+        for (int i = index; i < index + count; i++) {
+            min = Double.min(min, candles.get(i).getStockPrice(dataType));
         }
-        return result;        
+        return min;        
     }
     
     /**
-     * Use binary search to get the index in the stock candle array given a date.
-     * TODO: Can we use map instead of binary search?
-     * @param date Input date
-     * @param getNearestIndex True if we either return the exact date index or return the nearest date index (so we will always
-     *        return a value > 0). False if we can return -1. 
-     * @return
+     * Given a datetime object, get the corresponding candle. If there is no such datetime, return null.
      */
-    public int getDateIndex(DateTime date, boolean getNearestIndex) {
-        int start = 0;
-        int maxEnd = candles.size() - 1;
-        int end = maxEnd;
-        int mid = -1;
-        boolean found = false;
-        while ((!found) && (start <= end)) {
-            mid = (start + end) / 2;
-            DateTime midDate = candles.get(mid).getDateTime();
-            if (date.isBefore(midDate)) {
-                end = mid - 1;
-            }
-            else if (date.isAfter(midDate)) {
-                start = mid + 1;
-            }
-            else {
-                found = true;
-            }
-        }
-        if (!found) {
-            int dateIndex = -1;
-            //If we need to get the nearest index from the given date
-            if (getNearestIndex) {
-                dateIndex = mid;
-                if (dateIndex < 0) dateIndex = 0;
-                if (dateIndex > maxEnd) dateIndex = maxEnd;                
-            }
-            //Should not happen if the date passed in is a valid date.
-            return dateIndex;
-        }
-        return mid;
+    public T getCandle(DateTime dateTime) {
+        return dateTimeMap.getOrDefault(dateTime, null);
     }
     
-    public int getDateIndex(DateTime date) {
-        return getDateIndex(date, false);
-    }
-    
-    public boolean hasDate(DateTime date) {
-        return (getDateIndex(date, false) >= 0);
+    /**
+     * Return true if the datetime can be found in the candle list, false if not.
+     */
+    public boolean hasCandle(DateTime dateTime) {
+        return dateTimeMap.containsKey(dateTime);
     }
     
 }
