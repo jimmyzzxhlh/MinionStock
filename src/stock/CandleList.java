@@ -96,6 +96,7 @@ public class CandleList<T extends AbstractCandle<T>> {
         volume += candle.volume;
         low = Double.min(low, candle.low);
         high = Double.max(high, candle.high);
+        dateTimeMap.put(candle.getDateTime(), candle);
     }
     
     public double getBodyLength() {
@@ -179,18 +180,17 @@ public class CandleList<T extends AbstractCandle<T>> {
     }
     
     /**
-     * Get the maximum stock price during a time range, defined by the current index
-     * and the number of candles to look forward.
-     * @param index The index of the first candle.
-     * @param count Number of candles to look forward.
+     * Get the maximum stock price during a time range.
+     * @param start The start index
+     * @param end The end index
      * @param dataType Type of data to look at (open, close, etc.).
      * @return See description. If nothing can be returned, then return 0.
      */
-    public double getMaxPrice(int index, int count, StockCandleDataType dataType) {
-        if (index + count - 1 >= candles.size()) return 0;  //TODO - Should log an error.
+    public double getMaxPrice(int start, int end, StockCandleDataType dataType) {
+        if (start < 0 || end >= candles.size()) return 0;  //TODO - Should log an error.
         
         double max = 0;
-        for (int i = index; i < index + count; i++) {
+        for (int i = start; i <= end; i++) {
             max = Double.max(max, candles.get(i).getStockPrice(dataType));
         }
         return max;        
@@ -204,11 +204,13 @@ public class CandleList<T extends AbstractCandle<T>> {
      * @param dataType Type of data to look at (open, close, etc.).
      * @return See description. If nothing can be returned, then return 0.
      */
-    public double getMinPrice(int index, int count, StockCandleDataType dataType) {
-        if (index + count - 1 >= candles.size()) return 0;  //TODO - should log an error.
-        double min = 0;
-        for (int i = index; i < index + count; i++) {
-            min = Double.min(min, candles.get(i).getStockPrice(dataType));
+    public double getMinPrice(int start, int end, StockCandleDataType dataType) {
+    	if (start < 0 || end >= candles.size()) return 0;  //TODO - Should log an error.
+        
+    	double min = 0;
+        for (int i = start; i <= end; i++) {
+        	double price = candles.get(i).getStockPrice(dataType);
+        	min = (min == 0 ? price : Double.min(min, price));
         }
         return min;        
     }
