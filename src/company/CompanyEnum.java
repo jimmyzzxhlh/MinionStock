@@ -4,12 +4,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CompanyEnum {
+	
+	/**
+	 * Adding exchange here should modify the test case of downloading companies as well.
+	 * Currently we are not considering AMEX exchange as the companies are not too useful for analysis.
+	 * @author jimmyzzxhlh
+	 *
+	 */
     public enum Exchange {
         NASDAQ,
         NYSE,
-        AMEX,
-        SSE,
-        SZSE
     }
    
     public enum Sector {
@@ -72,7 +76,7 @@ public class CompanyEnum {
     	BUILDING_MATERIALS("Building Materials"),
     	BUILDING_OPERATORS("Building operators"),
     	BUILDING_PRODUCTS("Building Products"),
-    	BUILDING_SERVICES("Business Services"),
+    	BUSINESS_SERVICES("Business Services"),
     	CATALOG_DISTRIBUTION("Catalog_Specialty Distribution"),
     	CLOTHING_STORES("Clothing_Shoe_Accessory Stores"),
     	COAL_MINING("Coal Mining"),

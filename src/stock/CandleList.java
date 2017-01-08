@@ -36,7 +36,7 @@ public class CandleList<T extends AbstractCandle<T>> {
     public CandleList(CandleList<T> candleList) {
         this.candles = new ArrayList<>();
         this.dateTimeMap = new HashMap<>();
-        this.company = new Company(company);
+        if (candleList.company != null) this.company = new Company(candleList.company);
         this.volume = candleList.volume;
         this.low = candleList.low;
         this.high = candleList.high;

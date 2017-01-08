@@ -34,6 +34,7 @@ public class CandleListTest {
 		List<Double> highList = Arrays.asList(51.2, 51.8, 52.0);
 		List<Double> lowList = Arrays.asList(49.5, 49.3, 49.2);
 		List<Double> closeList = Arrays.asList(50.5, 49.4, 51.5);
+		List<Long> volumeList = Arrays.asList(100000L, 120000L, 110000L);
 		final int size = dateTimeList.size();
 		for (int i = 0; i < size; i++) {
 			candleList.add(new DailyCandle()
@@ -41,7 +42,8 @@ public class CandleListTest {
 							.withOpen(openList.get(i))
 							.withHigh(highList.get(i))
 							.withLow(lowList.get(i))
-							.withClose(closeList.get(i)));
+							.withClose(closeList.get(i))
+							.withVolume(volumeList.get(i)));
 		}
 		
 		//Check candle list basic property
@@ -66,5 +68,17 @@ public class CandleListTest {
 		assertTrue(candleList.hasCandle(CommonUtil.getDateTime("20170102")));
 		assertTrue(candleList.hasCandle(CommonUtil.getDateTime("20170103")));
 		
+		//Test deep copy
+		CandleList<DailyCandle> candleListCopy = new CandleList<DailyCandle>(candleList);
+		for (int i = 0; i < size; i++) {
+			DailyCandle candle = candleList.get(i);
+			DailyCandle candleCopy = candleListCopy.get(i);
+			assertEquals(candle.getOpen(), candleCopy.getOpen(), EPSILON);
+			assertEquals(candle.getHigh(), candleCopy.getHigh(), EPSILON);
+			assertEquals(candle.getLow(), candleCopy.getLow(), EPSILON);
+			assertEquals(candle.getClose(), candleCopy.getClose(), EPSILON);
+			assertEquals(candle.getDateTime(), candleCopy.getDateTime());
+			assertEquals(candle.getVolume(), candleCopy.getVolume());
+		}
 	}
 }

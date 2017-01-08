@@ -16,9 +16,8 @@ public class DownloadHelper {
 	
 	public static Map<String, Company> downloadCompanies() {
 		Map<String, Company> map = new HashMap<>();
-		
-		Exchange exchange = Exchange.NASDAQ;
-//		for (Exchange exchange : Exchange.values()) {
+
+		for (Exchange exchange : Exchange.values()) {
 			try (BufferedReader br = getBufferedReaderFromURL(getCompaniesURL(exchange))) {
 				br.readLine();   //Skip the first title line
 				String line;
@@ -29,9 +28,9 @@ public class DownloadHelper {
 			}
 			catch (Exception e) {
 				e.printStackTrace();
-				//TODO - log the exception
+				//TODO - log exception
 			}
-//		}
+		}
 		
 		return map;
 	}
