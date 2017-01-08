@@ -2,7 +2,7 @@ package stock;
 
 import org.joda.time.DateTime;
 
-import stock.StockEnum.StockCandleDataType;
+import enums.StockEnum.CandleDataType;
 
 /**
  * This is an abstract class to represent a candle.  
@@ -45,7 +45,7 @@ public abstract class AbstractCandle<T extends AbstractCandle<T>> {
      * @param dataType
      * @return
      */
-    public double getStockPrice(StockCandleDataType dataType) {
+    public double getStockPrice(CandleDataType dataType) {
         switch (dataType) {
         case OPEN: return open;
         case CLOSE: return close;

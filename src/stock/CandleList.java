@@ -8,7 +8,8 @@ import java.util.Map;
 
 import org.joda.time.DateTime;
 
-import stock.StockEnum.StockCandleDataType;
+import company.Company;
+import enums.StockEnum.CandleDataType;
 
 /**
  * Class for a list of candles.  
@@ -65,7 +66,7 @@ public class CandleList<T extends AbstractCandle<T>> {
     public List<T> getCandles()          { return candles; }
     public Company getCompany()          { return company; }
     public String getSymbol()            { return company.getSymbol(); }
-    public long getOutstandingShares()   { return company.getOutstandingShares(); }
+    public long getOutstandingShares()   { return company.getShares(); }
     
     public double getHigh(int index)  { return candles.get(index).high;   }
     public double getLow(int index)   { return candles.get(index).low;    }
@@ -186,7 +187,7 @@ public class CandleList<T extends AbstractCandle<T>> {
      * @param dataType Type of data to look at (open, close, etc.).
      * @return See description. If nothing can be returned, then return 0.
      */
-    public double getMaxPrice(int start, int end, StockCandleDataType dataType) {
+    public double getMaxPrice(int start, int end, CandleDataType dataType) {
         if (start < 0 || end >= candles.size()) return 0;  //TODO - Should log an error.
         
         double max = 0;
@@ -204,7 +205,7 @@ public class CandleList<T extends AbstractCandle<T>> {
      * @param dataType Type of data to look at (open, close, etc.).
      * @return See description. If nothing can be returned, then return 0.
      */
-    public double getMinPrice(int start, int end, StockCandleDataType dataType) {
+    public double getMinPrice(int start, int end, CandleDataType dataType) {
     	if (start < 0 || end >= candles.size()) return 0;  //TODO - Should log an error.
         
     	double min = 0;

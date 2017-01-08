@@ -11,7 +11,8 @@ import java.util.List;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
-import stock.StockEnum.StockCandleDataType;
+import company.Company;
+import enums.StockEnum.CandleDataType;
 import util.CommonUtil;
 
 public class CandleListTest {
@@ -22,7 +23,7 @@ public class CandleListTest {
 	 */
 	@Test
 	public void testDailyCandleList() {
-		CandleList<DailyCandle> candleList = new CandleList<>(new Company("TEST", 100));
+		CandleList<DailyCandle> candleList = new CandleList<>(new Company());
 		List<DateTime> dateTimeList = Arrays.asList(
 				CommonUtil.getDateTime("20170101"),
 				CommonUtil.getDateTime("20170102"),
@@ -51,14 +52,14 @@ public class CandleListTest {
 		assertEquals(openList.get(0) - Collections.min(lowList), candleList.getLowerShadowLength(), EPSILON);
 		
 		//Check candle list maximum and minimum price
-		assertEquals(Collections.max(openList), candleList.getMaxPrice(0, size - 1, StockCandleDataType.OPEN), EPSILON);
-		assertEquals(Collections.max(highList), candleList.getMaxPrice(0, size - 1, StockCandleDataType.HIGH), EPSILON);
-		assertEquals(Collections.max(lowList), candleList.getMaxPrice(0, size - 1, StockCandleDataType.LOW), EPSILON);
-		assertEquals(Collections.max(closeList), candleList.getMaxPrice(0, size - 1, StockCandleDataType.CLOSE), EPSILON);
-		assertEquals(Collections.min(openList), candleList.getMinPrice(0, size - 1, StockCandleDataType.OPEN), EPSILON);
-		assertEquals(Collections.min(highList), candleList.getMinPrice(0, size - 1, StockCandleDataType.HIGH), EPSILON);
-		assertEquals(Collections.min(lowList), candleList.getMinPrice(0, size - 1, StockCandleDataType.LOW), EPSILON);
-		assertEquals(Collections.min(closeList), candleList.getMinPrice(0, size - 1, StockCandleDataType.CLOSE), EPSILON);
+		assertEquals(Collections.max(openList), candleList.getMaxPrice(0, size - 1, CandleDataType.OPEN), EPSILON);
+		assertEquals(Collections.max(highList), candleList.getMaxPrice(0, size - 1, CandleDataType.HIGH), EPSILON);
+		assertEquals(Collections.max(lowList), candleList.getMaxPrice(0, size - 1, CandleDataType.LOW), EPSILON);
+		assertEquals(Collections.max(closeList), candleList.getMaxPrice(0, size - 1, CandleDataType.CLOSE), EPSILON);
+		assertEquals(Collections.min(openList), candleList.getMinPrice(0, size - 1, CandleDataType.OPEN), EPSILON);
+		assertEquals(Collections.min(highList), candleList.getMinPrice(0, size - 1, CandleDataType.HIGH), EPSILON);
+		assertEquals(Collections.min(lowList), candleList.getMinPrice(0, size - 1, CandleDataType.LOW), EPSILON);
+		assertEquals(Collections.min(closeList), candleList.getMinPrice(0, size - 1, CandleDataType.CLOSE), EPSILON);
 		
 		//Check candle list dateTimeMap
 		assertTrue(candleList.hasCandle(CommonUtil.getDateTime("20170101")));
