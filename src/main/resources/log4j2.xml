@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info" name="MinionStock" packages="">
+  <Appenders>
+    <RollingFile name="RollingFile" fileName="logs/minionstock.log"
+                 filePattern="logs/minionstock-%d{yyyy-MM-dd-HH}-%i.log">
+      <PatternLayout>
+        <Pattern>%d [%p] %c:%M(%L): %m%n</Pattern>
+      </PatternLayout>
+      <Policies>
+        <TimeBasedTriggeringPolicy interval="1" modulate="true" />
+      </Policies>
+      <DefaultRolloverStrategy max="24"/>
+    </RollingFile>
+  </Appenders>
+  <Loggers>
+    <Root level="error">
+      <AppenderRef ref="RollingFile"/>
+    </Root>
+  </Loggers>
+</Configuration>
