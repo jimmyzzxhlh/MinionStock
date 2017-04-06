@@ -3,7 +3,12 @@ package aurora;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class AuroraConnection {
+	
+	private static final Logger log = LoggerFactory.getLogger(AuroraConnection.class);
 	
 	private static Connection connection;
 
@@ -21,7 +26,7 @@ public class AuroraConnection {
 			connection = DriverManager.getConnection(AuroraConst.JDBC_URL);
 		}
 		catch (Exception e) {
-		
+			log.error("Cannot create Aurora connection. JDBC URL = " + AuroraConst.JDBC_URL);
 		}
 	}
 }
