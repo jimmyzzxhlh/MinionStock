@@ -9,16 +9,22 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import company.Company;
 import company.CompanyEnum.Exchange;
 
 public class DownloadHelper {
 	
+	private static final Logger log = LoggerFactory.getLogger(DownloadHelper.class);
+	
 	public static Map<String, Company> downloadCompanies() {
 		Map<String, Company> map = new HashMap<>();
 
 		for (Exchange exchange : Exchange.values()) {
-			try (BufferedReader br = getBufferedReaderFromURL(getCompaniesURL(exchange))) {
+			String url = getCompaniesURL(exchange);
+			try (BufferedReader br = getBufferedReaderFromURL(url)) {
 				br.readLine();   //Skip the first title line
 				String line;
 				while ((line = br.readLine()) != null) {
@@ -27,8 +33,7 @@ public class DownloadHelper {
 				}
 			}
 			catch (Exception e) {
-				e.printStackTrace();
-				//TODO - log exception
+				log.error("Unable to download companies from URL: " + url, e);
 			}
 		}
 		
@@ -48,7 +53,7 @@ public class DownloadHelper {
 			return true;
 		}
 		catch (Exception e) {
-			//TODO - Log exception
+			log.error("Unable to download from URL " + url + " to file " + filename, e);
 			return false;
 		}		
 	}
@@ -58,7 +63,7 @@ public class DownloadHelper {
 			return new URL(urlString);
 		}
 		catch (Exception e) {
-			//TODO - log exception
+			log.error("Unable to get URL object: " + urlString, e);
 			return null;
 		}
 	}
@@ -71,7 +76,7 @@ public class DownloadHelper {
 			return new BufferedReader(new InputStreamReader(url.openStream()));
 		}
 		catch (Exception e) {
-			//TODO - Log error
+			log.error("Unable to get Buffered Reader from URL: " + urlString, e);
 			return null;
 		}
 	}

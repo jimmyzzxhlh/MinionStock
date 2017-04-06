@@ -26,7 +26,7 @@ public class AuroraConnection {
 			connection = DriverManager.getConnection(AuroraConst.JDBC_URL);
 		}
 		catch (Exception e) {
-			log.error("Cannot create Aurora connection. JDBC URL = " + AuroraConst.JDBC_URL);
+			log.error("Cannot create Aurora connection.");
 		}
 	}	
 }
