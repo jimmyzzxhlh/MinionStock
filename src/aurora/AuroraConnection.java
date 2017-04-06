@@ -28,5 +28,5 @@ public class AuroraConnection {
 		catch (Exception e) {
 			log.error("Cannot create Aurora connection. JDBC URL = " + AuroraConst.JDBC_URL);
 		}
-	}
+	}	
 }

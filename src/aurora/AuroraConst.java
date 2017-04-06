@@ -8,6 +8,6 @@ public class AuroraConst {
 	public static final String DATABASE_SYMBOL = "symbol";
 	
 	public static final String JDBC_URL = "jdbc:mysql://" + ENDPOINT + ":" + PORT + "/" +  DATABASE_SYMBOL + "?"
-			+ "user=" + USERNAME + "&password" + PASSWORD;
+			+ "user=" + USERNAME + "&password=" + PASSWORD;
 	
 }
