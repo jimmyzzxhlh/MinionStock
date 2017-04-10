@@ -10,4 +10,19 @@ public class AuroraConst {
 	public static final String JDBC_URL = "jdbc:mysql://" + ENDPOINT + ":" + PORT + "/" +  DATABASE_SYMBOL + "?"
 			+ "user=" + USERNAME + "&password=" + PASSWORD;
 	
+	//Table definition
+	public static final String TABLE_COMPANY = "company";
+	
+	//Column definition
+	public static final String COLUMN_SYMBOL = "symbol";
+	public static final String COLUMN_SECTOR = "sector";
+	public static final String COLUMN_INDUSTRY = "industry";
+	public static final String COLUMN_SHARES = "shares";
+	public static final String COLUMN_EXCHANGE = "exchange";
+	
+	public static String getCompanyTable() {
+		return DATABASE_SYMBOL + "." + TABLE_COMPANY;
+	}
+	
+	
 }

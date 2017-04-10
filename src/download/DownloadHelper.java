@@ -12,6 +12,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import util.CommonUtil;
 import company.Company;
 import company.CompanyEnum.Exchange;
 
@@ -28,7 +29,12 @@ public class DownloadHelper {
 				br.readLine();   //Skip the first title line
 				String line;
 				while ((line = br.readLine()) != null) {
-					Company company = new Company(line);
+					String[] data = CommonUtil.splitCSVLine(line);
+					Company company = new Company()
+						.withExchange(exchange)
+						.withSymbol(data[0])
+						.withSector(data[5])
+						.withIndustry(data[6]);
 					map.put(company.getSymbol(), company);
 				}
 			}

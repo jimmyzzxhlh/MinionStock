@@ -53,7 +53,7 @@ public class CompanyEnum {
     	}
     }
     
-        public enum Industry {
+    public enum Industry {
     	ACCIDENT_HEALTH_INSURANCE("Accident &Health Insurance"),
     	ADVERTISING("Advertising"),
     	AEROSPACE("Aerospace"),

@@ -10,6 +10,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -19,6 +20,7 @@ import company.CompanyEnum.Sector;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(DownloadHelper.class)
+@PowerMockIgnore( {"javax.management.*"}) 
 public class DownloadTest {
 	
 	/**
