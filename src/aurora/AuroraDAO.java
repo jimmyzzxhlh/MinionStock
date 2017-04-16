@@ -45,7 +45,11 @@ public class AuroraDAO implements AuroraDAOInterface {
 	@Override
 	public void updateCompanies(Map<String, Company> map) {
 		if (map == null) return;
-		
+		for (Map.Entry<String, Company> entry : map.entrySet()) {		
+			String symbol = entry.getKey();
+			Company company = entry.getValue();
+			
+		}
 	}
 
 	@Override

@@ -1,5 +1,8 @@
 package util;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -27,5 +30,12 @@ public class CommonUtil {
 			data[i] = data[i].trim().replaceAll("^\"|\"$", "").trim();
 		}
 		return data;
+	}
+	
+	/**
+	 * Return a delimited string from a list of strings.
+	 */
+	public static String getDelimitedString(List<String> list, String delimiter) {
+		return list.stream().collect(Collectors.joining(delimiter));
 	}
 }

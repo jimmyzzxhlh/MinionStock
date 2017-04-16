@@ -1,13 +1,15 @@
 package aurora;
 
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.function.Consumer;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import util.CommonUtil;
 
 public class AuroraQueryHelper {
 	
@@ -35,4 +37,15 @@ public class AuroraQueryHelper {
 			return false;
 		}
 	}
+
+	//todo
+	public static void insertOrUpdateRecord(String table, List<String> columns, List<String> values) {
+		String columnStr = CommonUtil.getDelimitedString(columns, ",");
+		String valueStr = CommonUtil.getDelimitedString(values, ",");
+		String query = String.format("INSERT INTO %s (%s) VALUES (%s) "
+								   + "ON DUPLICATE KEY UPDATE ", table, columnStr, valueStr);
+		executeQuery(query);		
+	}
+	
+
 }
