@@ -13,7 +13,7 @@ import company.Company;
  *
  */
 public interface AuroraDAOInterface {
-	Map<String, Company> getCompanies();
-	
-	
+	public Map<String, Company> getCompanies();
+	public void updateCompanies(Map<String, Company> map);
+	public boolean companyExists(String symbol);
 }

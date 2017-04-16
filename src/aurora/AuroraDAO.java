@@ -2,6 +2,7 @@ package aurora;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,9 +37,20 @@ public class AuroraDAO implements AuroraDAOInterface {
 				map.put(symbol, company);
 			}
 		} catch (SQLException e) {
-			log.error("SQL Exception when running query: " + query, e);			
+			log.error("SQL Exception when getting result from query: " + query, e);			
 		}
-		return map;
+		return map; 
+	}
+
+	@Override
+	public void updateCompanies(Map<String, Company> map) {
+		if (map == null) return;
+		
+	}
+
+	@Override
+	public boolean companyExists(String symbol) {
+		return AuroraQueryHelper.recordExists(AuroraConst.TABLE_COMPANY, String.format("symbol = '%s'", symbol));	
 	}
 
 }
