@@ -38,12 +38,28 @@ public class AuroraQueryHelper {
 		}
 	}
 
-	//todo
+	/**
+	 * Insert a record if it does not exist. If it exists, update the record.
+	 * e.g.
+	 * INSERT INTO company (symbol, sector, industry, shares, exchange, last_updated)
+	   VALUES ('camt', 'a', 'b', 1, 'c', now())
+	   ON DUPLICATE KEY UPDATE sector = VALUES(sector),
+	                           industry = VALUES(industry),
+	                           shares = VALUES(shares),
+	                           exchange = VALUES(exchange),
+	                           last_updated = VALUES(last_updated)
+	 * @param table
+	 * @param columns
+	 * @param values
+	 */
 	public static void insertOrUpdateRecord(String table, List<String> columns, List<String> values) {
 		String columnStr = CommonUtil.getDelimitedString(columns, ",");
 		String valueStr = CommonUtil.getDelimitedString(values, ",");
+		String updateStr = columns.stream()
+				                  .map(s -> (s + " = VALUES(" + s + ")"))
+				                  .collect(Collectors.joining(", "));
 		String query = String.format("INSERT INTO %s (%s) VALUES (%s) "
-								   + "ON DUPLICATE KEY UPDATE ", table, columnStr, valueStr);
+								   + "ON DUPLICATE KEY UPDATE %s", table, columnStr, valueStr, updateStr);
 		executeQuery(query);		
 	}
 	
