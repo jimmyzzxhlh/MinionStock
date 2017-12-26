@@ -74,7 +74,7 @@ public class DownloadHelper {
 		}
 	}
 
-	private static BufferedReader getBufferedReaderFromURL(String urlString) {
+	public static BufferedReader getBufferedReaderFromURL(String urlString) {
 		URL url = getURL(urlString);
 		if (url == null) return null;
 		
