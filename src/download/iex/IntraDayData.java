@@ -8,6 +8,7 @@ public class IntraDayData {
 	private double low;
 	private double average;
 	private long volume;
+	private long marketVolume;
 	private long numberOfTrades;
 	public String getDate() {
 		return date;
@@ -50,6 +51,12 @@ public class IntraDayData {
 	}
 	public void setVolume(long volume) {
 		this.volume = volume;
+	}
+	public long getMarketVolume() {
+		return marketVolume;
+	}
+	public void setMarketVolume(long marketVolume) {
+		this.marketVolume = marketVolume;
 	}
 	public long getNumberOfTrades() {
 		return numberOfTrades;

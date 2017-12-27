@@ -2,7 +2,8 @@
 <Configuration status="info" name="MinionStock" packages="">
   <Appenders>
     <RollingFile name="RollingFile" fileName="logs/minionstock.log"
-                 filePattern="logs/minionstock-%d{yyyy-MM-dd-HH}-%i.log">
+                 filePattern="logs/minionstock-%d{yyyy-MM-dd-HH}-%i.log"
+                 immediateFlush="true">
       <PatternLayout>
         <Pattern>%d [%p] %c:%M(%L): %m%n</Pattern>
       </PatternLayout>
@@ -13,7 +14,7 @@
     </RollingFile>
   </Appenders>
   <Loggers>
-    <Root level="error">
+    <Root level="info">
       <AppenderRef ref="RollingFile"/>
     </Root>
   </Loggers>
