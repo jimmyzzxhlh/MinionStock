@@ -1,6 +1,9 @@
 package util;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.joda.time.DateTime;
@@ -37,5 +40,10 @@ public class CommonUtil {
 	 */
 	public static String getDelimitedString(List<String> list, String delimiter) {
 		return list.stream().collect(Collectors.joining(delimiter));
+	}
+	
+	public static void scheduleDailyJob(Runnable runnable) {
+	    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+	    executorService.scheduleAtFixedRate(runnable, 24, 24, TimeUnit.HOURS);
 	}
 }

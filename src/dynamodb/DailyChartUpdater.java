@@ -4,11 +4,11 @@ import com.google.gson.Gson;
 
 import company.CompanyManager;
 import download.DownloadHelper;
-import download.iex.IEXUrlBuilder;
+import download.iex.IexUrlBuilder;
 
-public class DailyChartUpdater {
+public class DailyChartUpdater implements ChartUpdater {
     
-    public static void startJob() {
+    public void startJob() {
 //        ScheduledExecutorService executorService = 
 //            Executors.newScheduledThreadPool(1);
 //        executorService.scheduleAtFixedRate(() -> init(), 0, 24, TimeUnit.HOURS);
@@ -23,7 +23,7 @@ public class DailyChartUpdater {
     public static void backfillOldData() {
         Gson g = new Gson();
         for (String symbol : CompanyManager.getInstance().getCompaniesMap().keySet()) {
-            String url = new IEXUrlBuilder()
+            String url = new IexUrlBuilder()
                 .withSymbol(symbol)
                 .withChart()
                 .withTwoYears()

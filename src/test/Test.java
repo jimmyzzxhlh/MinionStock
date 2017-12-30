@@ -11,7 +11,7 @@ import dynamodb.item.DailyItem;
 
 public class Test {
 	public static void main(String[] args) throws Exception {
-	    testDynamoDB();
+	    testIpxApi();
 	}
 	
 	private static void testDynamoDB() throws Exception {
@@ -24,7 +24,7 @@ public class Test {
 	}
 	
 	private static void testIpxApi() throws Exception {
-	    BufferedReader br = DownloadHelper.getBufferedReaderFromURL("https://api.iextrading.com/1.0/stock/aapl/chart/date/20171222");
+	    BufferedReader br = DownloadHelper.getBufferedReaderFromURL("https://api.iextrading.com/1.0/stock/camt/chart/1d");
         StringBuilder sb = new StringBuilder();
         String line;
         while ((line = br.readLine()) != null) {

@@ -11,6 +11,8 @@ public class IntraDayItem {
 	private String time;
 	private double high;
 	private double low;
+	private double average;
+	private long numberOfTrades;
 	
 	@DynamoDBHashKey(attributeName="S")
 	public String getSymbol() { return this.symbol; }
@@ -28,5 +30,11 @@ public class IntraDayItem {
 	public double getLow() { return this.low; }
 	public void setLow(double low) { this.low = low; }
 	
+	@DynamoDBAttribute(attributeName="A")
+	public double getAverage() { return this.average; }
+	public void setAverage(double average) { this.average = average; }
 	
+	@DynamoDBAttribute(attributeName="N")
+	public long getNumberOfTrades() { return this.numberOfTrades; }
+	public void setNumberOfTrades(long numberOfTrades) { this.numberOfTrades = numberOfTrades; }
 }

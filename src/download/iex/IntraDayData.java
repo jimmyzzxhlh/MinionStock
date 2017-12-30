@@ -1,15 +1,24 @@
 package download.iex;
 
+import com.google.gson.annotations.SerializedName;
+
+/**
+ * Stores data for intra day from IEX.
+ * 
+ * Note: We get data from market* fields because the normal fields do not really return the
+ * actual data for some reason. 
+ * 
+ * @author jimmyzzxhlh-Dell
+ *
+ */
 public class IntraDayData {
 	private String date;
-	private String minute;
-	private String label;
-	private double high;
-	private double low;
-	private double average;
-	private long volume;
-	private long marketVolume;
-	private long numberOfTrades;
+	private String minute;	
+	@SerializedName("marketHigh") private double high;
+	@SerializedName("marketLow") private double low;
+	@SerializedName("marketAverage") private double average;
+	@SerializedName("marketVolume") private long volume;
+	@SerializedName("marketNumberOfTrades") private long numberOfTrades;
 	public String getDate() {
 		return date;
 	}
@@ -21,12 +30,6 @@ public class IntraDayData {
 	}
 	public void setMinute(String minute) {
 		this.minute = minute;
-	}
-	public String getLabel() {
-		return label;
-	}
-	public void setLabel(String label) {
-		this.label = label;
 	}
 	public double getHigh() {
 		return high;
@@ -51,12 +54,6 @@ public class IntraDayData {
 	}
 	public void setVolume(long volume) {
 		this.volume = volume;
-	}
-	public long getMarketVolume() {
-		return marketVolume;
-	}
-	public void setMarketVolume(long marketVolume) {
-		this.marketVolume = marketVolume;
 	}
 	public long getNumberOfTrades() {
 		return numberOfTrades;

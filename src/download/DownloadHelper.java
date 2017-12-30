@@ -65,10 +65,9 @@ public class DownloadHelper {
         char[] buffer = new char[64000];
         try (BufferedReader br = getBufferedReaderFromURL(urlString)) {
             int len = 0;
-            do {
-                len = br.read(buffer);
+            while ((len = br.read(buffer)) > 0) {
                 sb.append(buffer, 0, len);
-            } while (len >= 0);
+            }
         } catch (Exception e) {
             log.error("Failed to download from URL " + urlString + " to string: ", e);
         }

@@ -6,6 +6,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import download.DownloadHelper;
+import util.CommonUtil;
 
 public class CompanyManager {    
     private Map<String, Company> companiesMap;
@@ -13,12 +14,10 @@ public class CompanyManager {
     
     private CompanyManager() {
         initCompaniesMap();
-        ScheduledExecutorService executorService = 
-            Executors.newScheduledThreadPool(1);
-        executorService.scheduleAtFixedRate(() -> {
+        CommonUtil.scheduleDailyJob(() -> {        
             this.companiesMap.clear();
             initCompaniesMap();
-        }, 24, 24, TimeUnit.HOURS);        
+        });        
     }
     
     public static CompanyManager getInstance() {

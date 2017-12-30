@@ -5,7 +5,9 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
-@DynamoDBTable(tableName="Daily")
+import dynamodb.DynamoDBConst;
+
+@DynamoDBTable(tableName=DynamoDBConst.TABLE_DAILY)
 public class DailyItem {
 	private String symbol;
 	private String date;

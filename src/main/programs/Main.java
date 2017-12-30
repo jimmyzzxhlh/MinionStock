@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import company.CompanyManager;
-import dynamodb.DailyChartUpdater;
+import dynamodb.IntraDayChartUpdater;
 
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
@@ -12,6 +12,6 @@ public class Main {
 	public static void main(String[] args) {
 	    log.info("Starting main...");
 		CompanyManager.startJob();
-	    DailyChartUpdater.startJob();
+	    new IntraDayChartUpdater().startJob();
 	}
 }
