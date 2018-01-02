@@ -1,5 +1,7 @@
 package download.iex;
 
+import dynamodb.item.DailyItem;
+
 public class DailyData {
 	private String date;
 	private double open;
@@ -50,5 +52,25 @@ public class DailyData {
 	}
 	public void setVwap(double vwap) {
 		this.vwap = vwap;
-	}		
+	}
+	
+    /**
+     * Get a daily item from IEX daily data.
+     * 
+     * Notice that there might be data where only close price is present. We then set
+     * all the other prices to be the same as close price. 
+     */
+    public DailyItem toDailyItem(String symbol) { 
+        DailyItem item = new DailyItem();
+        item.setSymbol(symbol);
+        item.setDate(date.replace("-", ""));
+        item.setOpen(open > 0 ? open : close);
+        item.setClose(close);
+        item.setHigh(high > 0 ? high : close);
+        item.setLow(low > 0 ? low : close);
+        item.setVwap(vwap > 0 ? vwap : close);
+        item.setVolume(volume);        
+        
+        return item;
+    }
 }

@@ -2,14 +2,13 @@ package download.iex;
 
 import com.google.gson.annotations.SerializedName;
 
+import dynamodb.item.IntraDayItem;
+
 /**
  * Stores data for intra day from IEX.
  * 
  * Note: We get data from market* fields because the normal fields do not really return the
  * actual data for some reason. 
- * 
- * @author jimmyzzxhlh-Dell
- *
  */
 public class IntraDayData {
 	private String date;
@@ -60,5 +59,20 @@ public class IntraDayData {
 	}
 	public void setNumberOfTrades(long numberOfTrades) {
 		this.numberOfTrades = numberOfTrades;
-	}	
+	}
+	
+    public IntraDayItem toIntraDayItem(String symbol) {
+        if (numberOfTrades <= 0) {
+            throw new IllegalArgumentException("Number of trades cannot be 0, no reason to put the data into DynamoDB.");
+        }
+        IntraDayItem item = new IntraDayItem();
+        item.setAverage(average);
+        item.setHigh(high);
+        item.setLow(low);
+        item.setNumberOfTrades(numberOfTrades);
+        item.setSymbol(symbol);
+        item.setTime(date + " " + minute);
+        
+        return item;
+    }
 }

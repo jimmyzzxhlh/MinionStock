@@ -1,7 +1,26 @@
 package dynamodb;
 
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
+import com.amazonaws.services.dynamodbv2.model.UpdateTableRequest;
+
+import company.Company;
+import download.iex.CompanyStatsData;
+import download.iex.DailyData;
 import download.iex.IntraDayData;
+import dynamodb.item.CompanyItem;
+import dynamodb.item.CompanyStatsItem;
+import dynamodb.item.DailyItem;
 import dynamodb.item.IntraDayItem;
+import dynamodb.item.StatusItem;
+import enums.JobEnum;
+import util.CommonUtil;
 
 public class DynamoDBHelper {
 	
@@ -15,18 +34,68 @@ public class DynamoDBHelper {
         return instance;
     }
     
-    public IntraDayItem getIntraDayItem(String symbol, IntraDayData data) {
-        if (data.getNumberOfTrades() <= 0) {
-            throw new IllegalArgumentException("Number of trades cannot be 0, no reason to put the data into DynamoDB.");
+    public Map<String, Company> getCompaniesMap() {
+        Map<String, Company> map = new HashMap<>();
+        List<CompanyItem> items =
+            DynamoDBProvider.getInstance().getMapper().scan(CompanyItem.class, new DynamoDBScanExpression());
+        for (CompanyItem item : items) {
+            map.put(item.getSymbol(), item.toCompany());
         }
-        IntraDayItem item = new IntraDayItem();
-        item.setAverage(data.getAverage());
-        item.setHigh(data.getHigh());
-        item.setLow(data.getLow());
-        item.setNumberOfTrades(data.getNumberOfTrades());
-        item.setSymbol(symbol);
-        item.setTime(data.getDate() + " " + data.getMinute());
         
-        return item;
+        return map;
     }
+    
+    public StatusItem getStatusItem(JobEnum state) {
+        return DynamoDBProvider.getInstance().getMapper().load(StatusItem.class, state.toString());
+    }
+    
+    private class Capacity {
+        long read;
+        long write;
+    }
+    
+    public Capacity getCapacity(String tableName) {
+        ProvisionedThroughputDescription throughput = DynamoDBProvider
+           .getInstance()
+           .getDynamoDB()
+           .describeTable(tableName)
+           .getTable()
+           .getProvisionedThroughput();
+        
+        Capacity capacity = new Capacity();
+        capacity.read = throughput.getReadCapacityUnits();
+        capacity.write = throughput.getWriteCapacityUnits();
+        return capacity;
+        
+    }
+    
+    public void updateReadCapacity(String tableName, long readCapacity) {
+        Capacity capacity = getCapacity(tableName);
+        // DynamoDB throws exception if capacity is not actually changed, which is pretty dumb...
+        if (capacity.read == readCapacity) {
+            return;
+        }
+        
+        UpdateTableRequest request = new UpdateTableRequest()
+            .withTableName(tableName)
+            .withProvisionedThroughput(new ProvisionedThroughput()
+                .withReadCapacityUnits(readCapacity)
+                .withWriteCapacityUnits(capacity.write));                
+        DynamoDBProvider.getInstance().getDynamoDB().updateTable(request);        
+    }
+    
+    public void updateWriteCapacity(String tableName, long writeCapacity) {
+        Capacity capacity = getCapacity(tableName);
+        // DynamoDB throws exception if capacity is not actually changed, which is pretty dumb...
+        if (capacity.write == writeCapacity) {
+            return;
+        }
+        
+        UpdateTableRequest request = new UpdateTableRequest()
+            .withTableName(tableName)
+            .withProvisionedThroughput(new ProvisionedThroughput()
+                .withReadCapacityUnits(capacity.read)
+                .withWriteCapacityUnits(writeCapacity));                
+        DynamoDBProvider.getInstance().getDynamoDB().updateTable(request);
+    }    
 }

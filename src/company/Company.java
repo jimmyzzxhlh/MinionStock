@@ -5,18 +5,16 @@ import util.CommonUtil;
 import company.CompanyEnum.Exchange;
 import company.CompanyEnum.Industry;
 import company.CompanyEnum.Sector;
+import dynamodb.item.CompanyItem;
 
 /**
  * Class for describing the company of a stock
  * The attributes here should be pretty much static (i.e. not frequently changed by stock price movement). 
- * @author jimmyzzxhlh-Dell
- *
  */
 public class Company {
     private String symbol;
     private Sector sector;
     private Industry industry;
-    private long shares;
     private Exchange exchange;
     
     public Company() {}
@@ -25,7 +23,6 @@ public class Company {
         this.symbol = company.symbol;
         this.sector = company.sector;
         this.industry = company.industry;
-        this.shares = company.shares;
         this.exchange = company.exchange;
     }
     
@@ -52,9 +49,9 @@ public class Company {
     	return this;
     }
     
-    public Company withShares(long shares) {
-    	this.shares = shares;
-    	return this;
+    public Company withExchange(String exchange) {
+        this.exchange = Exchange.get(exchange);
+        return this;
     }
     
     public Company withExchange(Exchange exchange) {
@@ -65,7 +62,15 @@ public class Company {
     public String getSymbol()     { return this.symbol; }
     public Sector getSector()     { return this.sector; }
     public Industry getIndustry() { return this.industry; }
-    public long getShares()       { return this.shares; }
     public Exchange getExchange() { return this.exchange; }
+    
+    public CompanyItem toCompanyItem() {
+        CompanyItem item = new CompanyItem();
+        item.setSymbol(symbol);
+        item.setExchange(exchange.toString());
+        item.setIndustry(industry.toString());
+        item.setSector(sector.toString());
         
+        return item;
+    }
 }

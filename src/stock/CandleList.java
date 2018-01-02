@@ -66,7 +66,7 @@ public class CandleList<T extends AbstractCandle<T>> {
     public List<T> getCandles()          { return candles; }
     public Company getCompany()          { return company; }
     public String getSymbol()            { return company.getSymbol(); }
-    public long getOutstandingShares()   { return company.getShares(); }
+//    public long getOutstandingShares()   { return company.getShares(); }
     
     public double getHigh(int index)  { return candles.get(index).high;   }
     public double getLow(int index)   { return candles.get(index).low;    }
@@ -74,7 +74,7 @@ public class CandleList<T extends AbstractCandle<T>> {
     public double getClose(int index) { return candles.get(index).close;  }
     public long getVolume(int index)  { return candles.get(index).volume; }
     public DateTime getDateTime(int index)    { return candles.get(index).getDateTime(); }
-    public double getTurnoverRate(int index)  { return candles.get(index).getVolume() / getOutstandingShares(); }
+//    public double getTurnoverRate(int index)  { return candles.get(index).getVolume() / getOutstandingShares(); }
     
     public double getClose(DateTime dateTime) { return getCandle(dateTime).getClose(); }
     public double getHigh()           { return high;   }

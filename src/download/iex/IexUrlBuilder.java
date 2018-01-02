@@ -4,7 +4,8 @@ public class IexUrlBuilder {
     private static final String BASE_URL = "https://api.iextrading.com/1.0/stock/";
     
     private enum DataType {
-        CHART("chart");
+        CHART("chart"),
+        STATS("stats");
         
         private String dataType;
         private DataType(String dataType) {
@@ -52,6 +53,11 @@ public class IexUrlBuilder {
         return this;
     }
     
+    public IexUrlBuilder withStats() {
+        this.dataType = DataType.STATS;
+        return this;
+    }
+    
     public IexUrlBuilder withOneDay() {
         this.timeRange = TimeRange.ONE_DAY;
         return this;
@@ -76,6 +82,9 @@ public class IexUrlBuilder {
               .append("/")
               .append(timeRange.toString());
             break;
+        case STATS:
+            sb.append(symbol.toLowerCase())
+              .append("/stats");              
         default:
             break;
         }

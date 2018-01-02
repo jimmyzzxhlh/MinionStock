@@ -2,6 +2,7 @@ package download;
 
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.channels.Channels;
@@ -31,9 +32,14 @@ public class DownloadHelper {
                 String line;
                 while ((line = br.readLine()) != null) {
                     String[] data = CommonUtil.splitCSVLine(line);
-                    Company company = new Company().withExchange(exchange).withSymbol(data[0]).withSector(data[5])
+                    String symbol = data[0];
+                    // Only consider stocks that are pure alphabets 
+                    if (symbol.length() == 0 || !symbol.matches("[a-zA-Z]*")) {
+                        continue;
+                    }
+                    Company company = new Company().withExchange(exchange).withSymbol(symbol).withSector(data[5])
                             .withIndustry(data[6]);
-                    map.put(company.getSymbol(), company);
+                    map.put(symbol, company);
                 }
             } catch (Exception e) {
                 log.error("Unable to download companies from URL: " + url, e);
@@ -45,6 +51,7 @@ public class DownloadHelper {
     }
 
     public static boolean downloadURLToFile(String urlString, String fileName) {
+        log.info("Downloading URL " + urlString + " to file " + fileName + " ...");
         URL url = getURL(urlString);
         if (url == null)
             return false;
@@ -61,6 +68,7 @@ public class DownloadHelper {
     }
 
     public static String downloadURLToString(String urlString) {
+        log.info("Downloading URL " + urlString + " to string ...");
         StringBuilder sb = new StringBuilder();
         char[] buffer = new char[64000];
         try (BufferedReader br = getBufferedReaderFromURL(urlString)) {
@@ -69,7 +77,7 @@ public class DownloadHelper {
                 sb.append(buffer, 0, len);
             }
         } catch (Exception e) {
-            log.error("Failed to download from URL " + urlString + " to string: ", e);
+            log.error("Failed to download from URL " + urlString + " to string: ", e);            
         }
         return sb.toString();
     }
@@ -83,17 +91,9 @@ public class DownloadHelper {
         }
     }
 
-    public static BufferedReader getBufferedReaderFromURL(String urlString) {
+    public static BufferedReader getBufferedReaderFromURL(String urlString) throws IOException {
         URL url = getURL(urlString);
-        if (url == null)
-            return null;
-
-        try {
-            return new BufferedReader(new InputStreamReader(url.openStream()));
-        } catch (Exception e) {
-            log.error("Unable to get Buffered Reader from URL: " + urlString, e);
-            return null;
-        }
+        return new BufferedReader(new InputStreamReader(url.openStream()));        
     }
 
     private static String getCompaniesURL(Exchange exchange) {

@@ -1,10 +1,13 @@
 package test;
 
 import java.io.BufferedReader;
+import java.util.Arrays;
+import java.util.List;
 
 import com.google.gson.Gson;
 
 import download.DownloadHelper;
+import download.iex.DailyData;
 import download.iex.IntraDayData;
 import dynamodb.DynamoDBProvider;
 import dynamodb.item.DailyItem;
@@ -24,19 +27,17 @@ public class Test {
 	}
 	
 	private static void testIpxApi() throws Exception {
-	    BufferedReader br = DownloadHelper.getBufferedReaderFromURL("https://api.iextrading.com/1.0/stock/camt/chart/1d");
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-        }
-        br.close();
-        Gson gson = new Gson();
-        IntraDayData[] dataArray = gson.fromJson(sb.toString(), IntraDayData[].class);
-        long volume = 0;
-        for (IntraDayData data : dataArray) {
-            volume += data.getVolume();  
-        }
-        System.out.println(volume);
+	    String url = "https://api.iextrading.com/1.0/stock/thg/chart/2y";
+//	    BufferedReader br = DownloadHelper.getBufferedReaderFromURL(url);
+//        StringBuilder sb = new StringBuilder();
+//        String line;
+//        while ((line = br.readLine()) != null) {
+//            sb.append(line);
+//        }
+//        br.close();
+	    String str = DownloadHelper.downloadURLToString(url);
+        Gson g = new Gson();
+        List<DailyData> dataList =
+                Arrays.asList(g.fromJson(str, DailyData[].class));        
 	}
 }
