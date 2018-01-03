@@ -68,6 +68,11 @@ public class IexUrlBuilder {
         return this;
     }
     
+    public IexUrlBuilder withFiveYears() {
+        this.timeRange = TimeRange.FIVE_YEARS;
+        return this;
+    }
+    
     public String build() {
         if (symbol == null) {
             return "";

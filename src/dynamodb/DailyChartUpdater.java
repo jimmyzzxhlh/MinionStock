@@ -41,9 +41,9 @@ public class DailyChartUpdater implements ChartUpdater {
         log.info("Updating write capacity to " + WRITE_CAPACITY + " ...");
         DynamoDBHelper.getInstance().updateWriteCapacity(DynamoDBConst.TABLE_DAILY, WRITE_CAPACITY);
         
-        log.info("Checking current backfill status ...");
+//        log.info("Checking current backfill status ...");
         Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.BACKFILL_DAILY_CHART).toStatus();
-        log.info("Last updated symbol: " + status.getLastUpdatedSymbol());
+//        log.info("Last updated symbol: " + status.getLastUpdatedSymbol());
         
         log.info("Start backfilling daily chart ...");        
         Gson g = new GsonBuilder().setLenient().create();
@@ -52,13 +52,13 @@ public class DailyChartUpdater implements ChartUpdater {
             // TODO - Probably need to use try/catch to wrap the whole block here
             // so that we don't stop downloading if one of the symbol is broken.
             // How do we output the error to a different log?            
-            if (symbol.compareTo(status.getLastUpdatedSymbol()) < 0) {
-                continue;
-            }
+//            if (symbol.compareTo(status.getLastUpdatedSymbol()) < 0) {
+//                continue;
+//            }
             String url = new IexUrlBuilder()
                 .withSymbol(symbol)
                 .withChart()
-                .withTwoYears()
+                .withFiveYears()
                 .build();
             log.info("Getting daily chart for " + symbol);
             String str = DownloadHelper.downloadURLToString(url);
