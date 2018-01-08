@@ -5,7 +5,7 @@ import java.util.Map;
 
 public enum JobEnum {
     UPDATE_COMPANY("UpdateCompany"),
-    UPDATE_DAILY_CHART("UpdateDailyChart"),
+//    UPDATE_DAILY_CHART("UpdateDailyChart"),
     BACKFILL_DAILY_CHART("BackfillDailyChart");
     
     private final String enumStr;

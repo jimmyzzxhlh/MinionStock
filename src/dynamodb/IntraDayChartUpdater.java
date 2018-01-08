@@ -53,6 +53,6 @@ public class IntraDayChartUpdater implements ChartUpdater {
             }
             log.info("Done saving " + dataList.size() + " items.");            
         }
-        log.info("Done downloading intra day chart. Next update will be at " + CommonUtil.getTime(HOUR, MINUTE) + ".");        
+        log.info("Done downloading intra day chart. Next update will be at " + CommonUtil.formatHourMinute(HOUR, MINUTE) + ".");        
     }
 }

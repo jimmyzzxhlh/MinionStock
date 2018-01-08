@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -23,11 +24,11 @@ public class CommonUtil {
 	 * Get a DateTime object based on a date string
 	 * @param dateString Date with format yyyyMMdd
 	 */
-	public static LocalDate getDate(String dateString) {
-		return LocalDate.parse(dateString, dateFormatter);
+	public static LocalDate parseDate(String dateString) {
+	    return LocalDate.parse(dateString, dateFormatter);		
 	}
 	
-	public static String getDate(LocalDate date) {
+	public static String formatDate(LocalDate date) {
 	    return date.format(dateFormatter);
 	}
 	
@@ -35,16 +36,16 @@ public class CommonUtil {
 	 * Get a time string based on hour and minute.
 	 * e.g. hour = 9, minute = 5 -> "09:05"
 	 */
-	public static String getTime(int hour, int minute) {
+	public static String formatHourMinute(int hour, int minute) {
 	    LocalTime time = LocalTime.of(hour, minute);
 	    return time.format(timeFormatter);
 	}
 	
-	public static String getDateTime(ZonedDateTime dateTime) {
+	public static String formatDateTime(ZonedDateTime dateTime) {
 	    return dateTime.format(dateTimeFormatter);
 	}
 	
-	public static ZonedDateTime getDateTime(String dateTimeString) {
+	public static ZonedDateTime parseDateTime(String dateTimeString) {
 	    return ZonedDateTime.parse(dateTimeString, dateTimeFormatter);
 	}
 	
@@ -98,5 +99,28 @@ public class CommonUtil {
         }
 	    Duration delay = Duration.between(now, next);	    
 	    executorService.scheduleAtFixedRate(runnable, delay.getSeconds(), 86400, TimeUnit.SECONDS);
+	}
+	
+	public static <T> void requireNonNull(T obj, String objName) {
+	    Objects.requireNonNull(obj, objName + " cannot be null.");
+	}
+	
+	public static <T> void requireEqual(T firstObj, T secondObj) {
+	    if (firstObj == null || secondObj == null) {
+	        throw new IllegalArgumentException("Cannot pass null objects to check equality.");
+	    }
+	    if (firstObj.equals(secondObj)) {
+	        return;
+	    }
+	    String message = new StringBuilder()
+	        .append("Objects are not equal.")
+	        .append(System.lineSeparator())
+	        .append("First object : ")
+	        .append(firstObj.toString())
+	        .append(System.lineSeparator())
+	        .append("Second object: ")
+	        .append(secondObj.toString())
+	        .toString();	    
+	    throw new IllegalArgumentException(message);
 	}
 }

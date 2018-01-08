@@ -47,7 +47,7 @@ public class CompanyStatsData {
     public CompanyStatsItem getCompanyStatsItem(String symbol, LocalDate date) {
         CompanyStatsItem item = new CompanyStatsItem();
         item.setSymbol(symbol);
-        item.setDate(CommonUtil.getDate(date));        
+        item.setDate(CommonUtil.formatDate(date));        
         item.setDividendRate(dividendRate);
         item.setSharesFloating(sharesFloating);
         item.setSharesOutstanding(sharesOutstanding);

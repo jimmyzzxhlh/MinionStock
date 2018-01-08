@@ -8,8 +8,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import dynamodb.DynamoDBConst;
 
 @DynamoDBTable(tableName=DynamoDBConst.TABLE_DAILY)
-public class DailyItem {
-	private String symbol;
+public class DailyItem implements DynamoDBItem {
+    private String symbol;
 	private String date;
 	private double open;
 	private double close;	
@@ -17,6 +17,12 @@ public class DailyItem {
 	private double low;
 	private long volume;
 	private double vwap;
+	
+	public DailyItem() {}
+	
+	public DailyItem(String symbol) {
+	    this.symbol = symbol;
+	}
 	
 	@DynamoDBHashKey(attributeName="S")
 	public String getSymbol() { return this.symbol; }
@@ -49,4 +55,10 @@ public class DailyItem {
 	@DynamoDBAttribute(attributeName="VW")
 	public double getVwap() { return this.vwap; }
 	public void setVwap(double vwap) { this.vwap = vwap; }
+
+	@Override
+	public String toString() {
+	    return String.format("symbol = %s, date = %s, open = %s, close = %s, high = %s, low = %s, volume = %s, vwap = %s",
+	        symbol, date, open, close, high, low, volume, vwap);	            
+	}
 }

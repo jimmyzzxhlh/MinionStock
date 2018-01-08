@@ -73,4 +73,10 @@ public class DailyData {
         
         return item;
     }
+    
+    @Override
+    public String toString() {
+        return String.format("date = %s, open = %d, close = %d, high = %d, low = %d, vwap = %d, volume = %d",
+            date, open, close, high, low, vwap, volume);
+    }
 }

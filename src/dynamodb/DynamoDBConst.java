@@ -9,5 +9,6 @@ public class DynamoDBConst {
 	public static final String TABLE_INTRA_DAY = "IntraDay";
 	public static final String TABLE_DAILY = "Daily";
 	public static final String TABLE_STATUS = "Status";
-	public static final long WRITE_CAPACITY_DEFAULT = 1;	
+	public static final long WRITE_CAPACITY_DEFAULT = 1;
+	public static final long READ_CAPACITY_DEFAULT = 5;
 }

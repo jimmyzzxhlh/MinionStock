@@ -73,4 +73,14 @@ public class Company {
         
         return item;
     }
+    
+    @Override
+    public String toString() {
+        return String.format("symbol = %s, exchange = %s, industry = %s, sector = %s",
+            symbol,
+            exchange == null ? "null" : exchange.toString(),
+            industry == null ? "null" : industry.toString(),
+            sector == null ? "null" : sector.toString()
+        );
+    }
 }

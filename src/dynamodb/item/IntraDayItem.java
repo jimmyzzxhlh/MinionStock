@@ -5,9 +5,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
-@DynamoDBTable(tableName="IntraDay")
-public class IntraDayItem {
-	private String symbol;
+import dynamodb.DynamoDBConst;
+
+@DynamoDBTable(tableName=DynamoDBConst.TABLE_INTRA_DAY)
+public class IntraDayItem implements DynamoDBItem {
+    private String symbol;
 	private String time;
 	private double high;
 	private double low;
@@ -36,5 +38,5 @@ public class IntraDayItem {
 	
 	@DynamoDBAttribute(attributeName="N")
 	public long getNumberOfTrades() { return this.numberOfTrades; }
-	public void setNumberOfTrades(long numberOfTrades) { this.numberOfTrades = numberOfTrades; }
+	public void setNumberOfTrades(long numberOfTrades) { this.numberOfTrades = numberOfTrades; }	
 }

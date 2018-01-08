@@ -32,10 +32,20 @@ public class Status {
     
     public StatusItem toStatusItem() {
         StatusItem item = new StatusItem();
-        item.setJob(job.toString());
+        item.setJob(job.toString());  // This cannot be null.
         item.setLastUpdatedSymbol(lastUpdatedSymbol);
-        item.setLastUpdatedTime(CommonUtil.getDateTime(lastUpdatedTime));
+        if (lastUpdatedTime != null) {
+            item.setLastUpdatedTime(CommonUtil.formatDateTime(lastUpdatedTime));
+        }
         
         return item;
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("job = %s, lastUpdatedSymbol = %s, lastUpdatedTime = %s",
+            job.toString(),
+            lastUpdatedSymbol,
+            lastUpdatedTime == null ? "null" : CommonUtil.formatDateTime(lastUpdatedTime));
     }
 }

@@ -8,7 +8,7 @@ import company.Company;
 import dynamodb.DynamoDBConst;
 
 @DynamoDBTable(tableName=DynamoDBConst.TABLE_COMPANY)
-public class CompanyItem {
+public class CompanyItem implements DynamoDBItem {
     private String symbol;
     private String sector;
     private String industry;
@@ -38,5 +38,5 @@ public class CompanyItem {
             .withSector(sector);
         
         return company;
-    }
+    }    
 }

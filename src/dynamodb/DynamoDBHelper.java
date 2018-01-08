@@ -1,26 +1,21 @@
 package dynamodb;
 
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.UpdateTableRequest;
 
 import company.Company;
-import download.iex.CompanyStatsData;
-import download.iex.DailyData;
-import download.iex.IntraDayData;
 import dynamodb.item.CompanyItem;
-import dynamodb.item.CompanyStatsItem;
 import dynamodb.item.DailyItem;
-import dynamodb.item.IntraDayItem;
+import dynamodb.item.DynamoDBItem;
 import dynamodb.item.StatusItem;
 import enums.JobEnum;
-import util.CommonUtil;
 
 public class DynamoDBHelper {
 	
@@ -48,7 +43,22 @@ public class DynamoDBHelper {
     public StatusItem getStatusItem(JobEnum state) {
         return DynamoDBProvider.getInstance().getMapper().load(StatusItem.class, state.toString());
     }
+
+    public DailyItem getLastDailyItem(String symbol) {
+        DynamoDBQueryExpression<DailyItem> queryExpression = new DynamoDBQueryExpression<DailyItem>()
+            .withLimit(1)
+            .withScanIndexForward(false)
+            .withHashKeyValues(new DailyItem(symbol));              
+        List<DailyItem> result =
+            DynamoDBProvider.getInstance().getMapper()
+                .queryPage(DailyItem.class, queryExpression).getResults();
+        if (result.size() == 0) {   
+            return null;
+        }
+        return result.get(0);
+    }
     
+    /** Any DynamoDB specific helpers go below from here */
     private class Capacity {
         long read;
         long write;
@@ -97,5 +107,21 @@ public class DynamoDBHelper {
                 .withReadCapacityUnits(capacity.read)
                 .withWriteCapacityUnits(writeCapacity));                
         DynamoDBProvider.getInstance().getDynamoDB().updateTable(request);
-    }    
+    }
+    
+    public void updateCapacity(String tableName, long readCapacity, long writeCapacity) {
+        Capacity capacity = getCapacity(tableName);
+        // DynamoDB throws exception if capacity is not actually changed, which is pretty dumb...
+        if (capacity.read == readCapacity && capacity.write == writeCapacity) {
+            return;
+        }
+        
+        UpdateTableRequest request = new UpdateTableRequest()
+            .withTableName(tableName)
+            .withProvisionedThroughput(new ProvisionedThroughput()
+                .withReadCapacityUnits(readCapacity)
+                .withWriteCapacityUnits(writeCapacity));                
+        DynamoDBProvider.getInstance().getDynamoDB().updateTable(request);
+    }
+     
 }

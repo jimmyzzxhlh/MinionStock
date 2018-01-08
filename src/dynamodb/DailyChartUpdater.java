@@ -1,87 +1,122 @@
 package dynamodb;
 
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 import download.DownloadHelper;
 import download.iex.DailyData;
 import download.iex.IexUrlBuilder;
 import dynamodb.item.DailyItem;
-import enums.JobEnum;
 import util.CommonUtil;
 
 public class DailyChartUpdater implements ChartUpdater {
     
-    private static final long WRITE_CAPACITY = 250;
-    
+    private static final long READ_CAPACITY = 20;
+    private static final long WRITE_CAPACITY = 20;
+    private static final long MAX_BATCH_SYMBOLS = 100;  // IEX supports up to 100 symbols in batch download.
     private static final Logger log = LoggerFactory.getLogger(DailyChartUpdater.class);
+    
+    private final Gson g = new GsonBuilder().setLenient().create();
+    private final Type type = new TypeToken<Map<String, Map<String, DailyData[]>>>(){}.getType(); 
+    
 //    private static final int HOUR = 17;
 //    private static final int MINUTE = 0;
     
     public void startJob() {
         try {            
-            backfillOldData();
+            updateDailyChart();
         }
         catch (Exception e) {
-            log.error("Failed to backfill old data: ", e);
+            log.error("Failed to update daily chart: ", e);
         }
     }
     
-    /**
-     * This assumes that the DynamoDb table is empty. Therefore this should only be run once,
-     * unless there is something going wrong with the DynamoDB...hopefully not.
-     */
-    public void backfillOldData() {
-        log.info("Updating write capacity to " + WRITE_CAPACITY + " ...");
-        DynamoDBHelper.getInstance().updateWriteCapacity(DynamoDBConst.TABLE_DAILY, WRITE_CAPACITY);
+    public void updateDailyChart() {
+        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
+            READ_CAPACITY, WRITE_CAPACITY));
+        DynamoDBHelper.getInstance().updateCapacity(DynamoDBConst.TABLE_DAILY, READ_CAPACITY, WRITE_CAPACITY);
         
-//        log.info("Checking current backfill status ...");
-        Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.BACKFILL_DAILY_CHART).toStatus();
-//        log.info("Last updated symbol: " + status.getLastUpdatedSymbol());
-        
-        log.info("Start backfilling daily chart ...");        
-        Gson g = new GsonBuilder().setLenient().create();
+        log.info("Start updating daily chart ...");        
+        List<String> symbols = new ArrayList<>(); 
         
         for (String symbol : DownloadHelper.downloadCompanies().keySet()) {
-            // TODO - Probably need to use try/catch to wrap the whole block here
-            // so that we don't stop downloading if one of the symbol is broken.
-            // How do we output the error to a different log?            
-//            if (symbol.compareTo(status.getLastUpdatedSymbol()) < 0) {
-//                continue;
-//            }
-            String url = new IexUrlBuilder()
-                .withSymbol(symbol)
+            symbols.add(symbol);
+            if (symbols.size() == MAX_BATCH_SYMBOLS) {
+                batchUpdateDailyChart(symbols);
+                symbols.clear();                
+            }                        
+        }
+        if (symbols.size() > 0) {
+            batchUpdateDailyChart(symbols);
+        }        
+        log.info("Done updating daily chart.");
+        
+        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
+            DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT));            
+        DynamoDBHelper.getInstance().updateCapacity(
+            DynamoDBConst.TABLE_DAILY, DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT);        
+    }
+    
+    private void batchUpdateDailyChart(List<String> symbols) {
+        String url = new IexUrlBuilder()
+                .withBatch()
+                .withSymbols(symbols)
                 .withChart()
-                .withFiveYears()
+                .withOneMonth()                
                 .build();
-            log.info("Getting daily chart for " + symbol);
-            String str = DownloadHelper.downloadURLToString(url);
-            if (str.length() == 0) {
-                log.warn("No data downloaded for " + symbol + ". Skipping ...");
-                saveStatus(status, symbol);
-                continue;
+        log.info(String.format("Getting one month daily chart from %s to %s ...",
+            symbols.get(0),
+            symbols.get(symbols.size() - 1)
+        ));        
+        
+        String str = DownloadHelper.downloadURLToString(url);
+        if (str.length() == 0) {
+            log.error("No data downloaded. This should probably not happen.");                
+            return;
+        }
+    
+        Map<String, Map<String, DailyData[]>> dataMap = g.fromJson(str, type);        
+        for (String symbol : symbols) {
+            log.info("Checking the last updated daily chart downloaded for " + symbol + " ...");
+            DailyItem lastItem = DynamoDBHelper.getInstance().getLastDailyItem(symbol);
+            List<DailyData> dataList = Arrays.asList(dataMap.get(symbol).get("chart"));
+            if (lastItem == null) {
+                log.info("Cannot find last updated item for " + symbol + ". Is this a new symbol?");
+                if (dataList.size() == 0) {
+                    log.info(String.format("No data is found for %s. Skipping ...", symbol));
+                    continue;
+                }
             }
-            List<DailyData> dataList =
-                Arrays.asList(g.fromJson(str, DailyData[].class));
-                
-            log.info("Start saving " + dataList.size() + " items ...");
+            else {
+                log.info("Last updated date is " + lastItem.getDate() + ".");
+                dataList = dataList.stream()
+                    .filter(data -> data.getDate().compareTo(lastItem.getDate()) > 0)
+                    .collect(Collectors.toList());
+                if (dataList.size() == 0) {    
+                    log.info(String.format("No data after %s is found for %s. Skipping ...",
+                        lastItem.getDate(), symbol));
+                    continue;
+                }
+            }            
+            
+            log.info(String.format("Start saving %d items for %s ...", dataList.size(), symbol));
             for (DailyData data : dataList) {
                 DailyItem item = data.toDailyItem(symbol);                
                 DynamoDBProvider.getInstance().getMapper().save(item);
             }            
-            log.info("Done saving " + dataList.size() + " items.");
-            saveStatus(status, symbol);                        
+            log.info(String.format("Done saving %d items for %s.", dataList.size(), symbol));            
         }
-        log.info("Done backfilling daily chart.");
-        
-        log.info("Updating write capacity to " + DynamoDBConst.WRITE_CAPACITY_DEFAULT + " ...");
-        DynamoDBHelper.getInstance().updateWriteCapacity(DynamoDBConst.TABLE_DAILY, DynamoDBConst.WRITE_CAPACITY_DEFAULT);
     }
     
     private void saveStatus(Status status, String symbol) {

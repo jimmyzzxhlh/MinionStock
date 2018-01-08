@@ -1,5 +1,9 @@
 package download.iex;
 
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+
 public class IexUrlBuilder {
     private static final String BASE_URL = "https://api.iextrading.com/1.0/stock/";
     
@@ -42,9 +46,21 @@ public class IexUrlBuilder {
     private String symbol;     
     private DataType dataType;
     private TimeRange timeRange;
+    private boolean batch;
+    private List<String> symbols;  // Only work with batch mode.    
     
     public IexUrlBuilder withSymbol(String symbol) {
         this.symbol = symbol;
+        return this;
+    }
+    
+    public IexUrlBuilder withSymbols(List<String> symbols) {
+        this.symbols = symbols;
+        return this;
+    }
+    
+    public IexUrlBuilder withBatch() {
+        this.batch = true;
         return this;
     }
     
@@ -63,6 +79,11 @@ public class IexUrlBuilder {
         return this;
     }
     
+    public IexUrlBuilder withOneMonth() {
+        this.timeRange = TimeRange.ONE_MONTH;
+        return this;
+    }
+    
     public IexUrlBuilder withTwoYears() {
         this.timeRange = TimeRange.TWO_YEARS;
         return this;
@@ -74,6 +95,35 @@ public class IexUrlBuilder {
     }
     
     public String build() {
+        if (batch) {
+            return buildBatch();
+        }
+        else {
+            return buildSingle();
+        }
+    }
+    
+    private String buildBatch() {
+        if (symbols == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(BASE_URL).append("market/batch?");
+        switch (dataType) {
+        case CHART:
+            sb.append("types=chart");
+            break;
+        default:
+            break;
+        }
+        sb.append("&symbols=")
+          .append(StringUtils.join(symbols, ","))
+          .append("&range=")
+          .append(timeRange.toString());
+        
+        return sb.toString();        
+    }
+    
+    private String buildSingle() {
         if (symbol == null) {
             return "";
         }
@@ -94,6 +144,6 @@ public class IexUrlBuilder {
             break;
         }
         return sb.toString();        
-    }
+    }   
     
 }

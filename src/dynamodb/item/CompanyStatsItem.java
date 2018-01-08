@@ -8,7 +8,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import dynamodb.DynamoDBConst;
 
 @DynamoDBTable(tableName=DynamoDBConst.TABLE_COMPANY_STATS)
-public class CompanyStatsItem {
+public class CompanyStatsItem implements DynamoDBItem {
     private String symbol;
     private String date;
     private long sharesOutstanding;
@@ -43,5 +43,5 @@ public class CompanyStatsItem {
     
     @DynamoDBAttribute(attributeName="DR")
     public double getDividendRate() { return dividendRate; }
-    public void setDividendRate(double dividendRate) { this.dividendRate = dividendRate; }       
+    public void setDividendRate(double dividendRate) { this.dividendRate = dividendRate; }
 }

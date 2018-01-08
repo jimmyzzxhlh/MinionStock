@@ -60,7 +60,7 @@ public class CompanyUpdater {
     private void saveStatus(Status status) {
         status.setLastUpdatedTime(CommonUtil.getPacificTimeNow());
         DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());
-        log.info("Next update for companies will be at " + CommonUtil.getTime(HOUR, MINUTE) + ".");
+        log.info("Next update for companies will be at " + CommonUtil.formatHourMinute(HOUR, MINUTE) + ".");
     }
     
     public void startJob() {

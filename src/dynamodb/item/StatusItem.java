@@ -10,7 +10,7 @@ import enums.JobEnum;
 import util.CommonUtil;
 
 @DynamoDBTable(tableName=DynamoDBConst.TABLE_STATUS)
-public class StatusItem {    
+public class StatusItem implements DynamoDBItem {
     private String job;
     private String lastUpdatedSymbol;
     private String lastUpdatedTime;
@@ -32,10 +32,9 @@ public class StatusItem {
         status.setJob(JobEnum.get(job));
         status.setLastUpdatedSymbol(lastUpdatedSymbol);
         if (lastUpdatedTime != null) {
-            status.setLastUpdatedTime(CommonUtil.getDateTime(lastUpdatedTime));        
+            status.setLastUpdatedTime(CommonUtil.parseDateTime(lastUpdatedTime));        
         }
         
         return status;
     }
-    
 }
