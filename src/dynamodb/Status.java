@@ -1,15 +1,18 @@
 package dynamodb;
 
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 
 import dynamodb.item.StatusItem;
 import enums.JobEnum;
+import enums.JobStatusEnum;
 import util.CommonUtil;
 
 public class Status {
     private JobEnum job;
     private String lastUpdatedSymbol;
     private ZonedDateTime lastUpdatedTime;
+    private JobStatusEnum jobStatus;
     
     public JobEnum getJob() {
         return job;
@@ -29,23 +32,38 @@ public class Status {
     public void setLastUpdatedTime(ZonedDateTime lastUpdatedTime) {
         this.lastUpdatedTime = lastUpdatedTime;
     }
+    public JobStatusEnum getJobStatus() {
+        return jobStatus;
+    }
+    public void setJobStatus(JobStatusEnum jobStatus) {
+        this.jobStatus = jobStatus;
+    }
     
     public StatusItem toStatusItem() {
         StatusItem item = new StatusItem();
-        item.setJob(job.toString());  // This cannot be null.
+        item.setJob(job.toString());  // This cannot be null as it is the hash key.
         item.setLastUpdatedSymbol(lastUpdatedSymbol);
         if (lastUpdatedTime != null) {
             item.setLastUpdatedTime(CommonUtil.formatDateTime(lastUpdatedTime));
         }
-        
+        if (jobStatus != null) {
+            item.setJobStatus(jobStatus.toString());
+        }
         return item;
+    }
+    
+    public boolean isUpdatedToday() {
+        if (lastUpdatedTime == null) return false;
+        return jobStatus == JobStatusEnum.DONE &&
+            lastUpdatedTime.toLocalDate().equals(CommonUtil.getPacificTimeNow().toLocalDate());        
     }
     
     @Override
     public String toString() {
-        return String.format("job = %s, lastUpdatedSymbol = %s, lastUpdatedTime = %s",
-            job.toString(),
+        return String.format("job = %s, lastUpdatedSymbol = %s, lastUpdatedTime = %s, jobStatus = %s",
+            job == null ? "null" : job.toString(),
             lastUpdatedSymbol,
-            lastUpdatedTime == null ? "null" : CommonUtil.formatDateTime(lastUpdatedTime));
+            lastUpdatedTime == null ? "null" : CommonUtil.formatDateTime(lastUpdatedTime),
+            jobStatus == null ? "null" : jobStatus.toString());
     }
 }

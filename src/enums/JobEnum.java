@@ -5,7 +5,7 @@ import java.util.Map;
 
 public enum JobEnum {
     UPDATE_COMPANY("UpdateCompany"),
-//    UPDATE_DAILY_CHART("UpdateDailyChart"),
+    UPDATE_DAILY_CHART("UpdateDailyChart"),
     BACKFILL_DAILY_CHART("BackfillDailyChart");
     
     private final String enumStr;
@@ -29,6 +29,6 @@ public enum JobEnum {
         if (map.containsKey(enumStr)) {
             return map.get(enumStr);
         }
-        throw new IllegalArgumentException(enumStr + " is not a valid StatusEnum.");
+        throw new IllegalArgumentException(enumStr + " is not a valid JobEnum.");
     }
 }

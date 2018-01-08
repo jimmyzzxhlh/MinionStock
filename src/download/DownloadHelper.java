@@ -21,7 +21,7 @@ public class DownloadHelper {
 
     private static final Logger log = LoggerFactory.getLogger(DownloadHelper.class);
 
-    public static Map<String, Company> downloadCompanies() {
+    public static Map<String, Company> downloadCompanies() throws IOException {
         Map<String, Company> map = new TreeMap<>();
 
         for (Exchange exchange : Exchange.values()) {
@@ -41,8 +41,9 @@ public class DownloadHelper {
                             .withIndustry(data[6]);
                     map.put(symbol, company);
                 }
-            } catch (Exception e) {
-                log.error("Unable to download companies from URL: " + url, e);
+            } catch (IOException e) {
+                log.error("Unable to download companies from URL: " + url);
+                throw e;
             }
         }
 

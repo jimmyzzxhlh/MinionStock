@@ -13,9 +13,10 @@ import com.amazonaws.services.dynamodbv2.model.UpdateTableRequest;
 import company.Company;
 import dynamodb.item.CompanyItem;
 import dynamodb.item.DailyItem;
-import dynamodb.item.DynamoDBItem;
 import dynamodb.item.StatusItem;
 import enums.JobEnum;
+import enums.JobStatusEnum;
+import util.CommonUtil;
 
 public class DynamoDBHelper {
 	
@@ -56,6 +57,11 @@ public class DynamoDBHelper {
             return null;
         }
         return result.get(0);
+    }
+    
+    public void saveStatus(Status status) {
+        status.setLastUpdatedTime(CommonUtil.getPacificTimeNow());
+        DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());        
     }
     
     /** Any DynamoDB specific helpers go below from here */

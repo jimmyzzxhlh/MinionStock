@@ -18,54 +18,73 @@ import download.DownloadHelper;
 import download.iex.DailyData;
 import download.iex.IexUrlBuilder;
 import dynamodb.item.DailyItem;
+import enums.JobEnum;
+import enums.JobStatusEnum;
 import util.CommonUtil;
 
 public class DailyChartUpdater implements ChartUpdater {
     
-    private static final long READ_CAPACITY = 20;
-    private static final long WRITE_CAPACITY = 20;
+//    private static final long READ_CAPACITY = 20;
+//    private static final long WRITE_CAPACITY = 20;
     private static final long MAX_BATCH_SYMBOLS = 100;  // IEX supports up to 100 symbols in batch download.
     private static final Logger log = LoggerFactory.getLogger(DailyChartUpdater.class);
     
     private final Gson g = new GsonBuilder().setLenient().create();
     private final Type type = new TypeToken<Map<String, Map<String, DailyData[]>>>(){}.getType(); 
     
-//    private static final int HOUR = 17;
-//    private static final int MINUTE = 0;
+    private static final int HOUR = 17;
+    private static final int MINUTE = 0;
     
     public void startJob() {
-        try {            
-            updateDailyChart();
-        }
-        catch (Exception e) {
-            log.error("Failed to update daily chart: ", e);
-        }
+        updateDailyChart();
+        CommonUtil.scheduleDailyJob(() -> updateDailyChart(), HOUR, MINUTE);
+        log.info(String.format("Scheduled a daily job to update daily chart at %s.",
+            CommonUtil.formatHourMinute(HOUR, MINUTE)));
     }
     
     public void updateDailyChart() {
-        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
-            READ_CAPACITY, WRITE_CAPACITY));
-        DynamoDBHelper.getInstance().updateCapacity(DynamoDBConst.TABLE_DAILY, READ_CAPACITY, WRITE_CAPACITY);
+//        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
+//            READ_CAPACITY, WRITE_CAPACITY));
+//        DynamoDBHelper.getInstance().updateCapacity(DynamoDBConst.TABLE_DAILY, READ_CAPACITY, WRITE_CAPACITY);
         
-        log.info("Start updating daily chart ...");        
-        List<String> symbols = new ArrayList<>(); 
-        
-        for (String symbol : DownloadHelper.downloadCompanies().keySet()) {
-            symbols.add(symbol);
-            if (symbols.size() == MAX_BATCH_SYMBOLS) {
-                batchUpdateDailyChart(symbols);
-                symbols.clear();                
-            }                        
+        log.info("Checking if the daily chart has been updated today ...");
+        Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.UPDATE_DAILY_CHART).toStatus();        
+        if (status.isUpdatedToday()) {
+            log.info("Companies have been updated at " + status.getLastUpdatedTime() + ". Skipping the update.");
+            return;
         }
-        if (symbols.size() > 0) {
-            batchUpdateDailyChart(symbols);
-        }        
-        log.info("Done updating daily chart.");
         
-        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
-            DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT));            
-        DynamoDBHelper.getInstance().updateCapacity(
-            DynamoDBConst.TABLE_DAILY, DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT);        
+        log.info("Start updating daily chart ...");
+        status.setJobStatus(JobStatusEnum.UPDATING);
+        DynamoDBHelper.getInstance().saveStatus(status);
+        
+        try {
+            List<String> symbols = new ArrayList<>(); 
+        
+            for (String symbol : DownloadHelper.downloadCompanies().keySet()) {
+                symbols.add(symbol);
+                if (symbols.size() == MAX_BATCH_SYMBOLS) {
+                    batchUpdateDailyChart(symbols);
+                    symbols.clear();                
+                }                        
+            }
+            if (symbols.size() > 0) {
+                batchUpdateDailyChart(symbols);
+            }        
+            log.info("Done updating daily chart.");
+            status.setJobStatus(JobStatusEnum.DONE);
+            DynamoDBHelper.getInstance().saveStatus(status);
+        }
+        catch (Exception e) {
+            log.error("Failed to update daily chart: ", e);
+            status.setJobStatus(JobStatusEnum.FAILED);
+            DynamoDBHelper.getInstance().saveStatus(status);
+        }
+        
+//        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
+//            DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT));            
+//        DynamoDBHelper.getInstance().updateCapacity(
+//            DynamoDBConst.TABLE_DAILY, DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT);        
     }
     
     private void batchUpdateDailyChart(List<String> symbols) {

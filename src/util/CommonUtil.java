@@ -14,11 +14,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class CommonUtil {
 	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 	private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss Z");
 	private static final ZoneId pacificZoneId = ZoneId.of("America/Los_Angeles");
+	
+	private static final Logger log = LoggerFactory.getLogger(CommonUtil.class);
 	
 	/**
 	 * Get a DateTime object based on a date string
@@ -70,10 +75,6 @@ public class CommonUtil {
 		return list.stream().collect(Collectors.joining(delimiter));
 	}
 	
-	public static ZonedDateTime getPacificTime(LocalDateTime dateTime) {
-	    return dateTime.atZone(pacificZoneId);
-	}
-	
 	public static ZonedDateTime getPacificTimeNow() {
 	    return ZonedDateTime.now(pacificZoneId);
 	}
@@ -84,7 +85,7 @@ public class CommonUtil {
 	 */
 	public static void scheduleDailyJob(Runnable runnable, int hour, int minute) {
 	    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-	    ZonedDateTime now = CommonUtil.getPacificTime(LocalDateTime.now());
+	    ZonedDateTime now = getPacificTimeNow();
 	    ZonedDateTime next = ZonedDateTime.of(
 	        now.getYear(),
 	        now.getMonth().getValue(),
@@ -99,6 +100,7 @@ public class CommonUtil {
         }
 	    Duration delay = Duration.between(now, next);	    
 	    executorService.scheduleAtFixedRate(runnable, delay.getSeconds(), 86400, TimeUnit.SECONDS);
+	    log.info(String.format("Job scheduled. Next job will be run at %s.", formatDateTime(next)));
 	}
 	
 	public static <T> void requireNonNull(T obj, String objName) {
