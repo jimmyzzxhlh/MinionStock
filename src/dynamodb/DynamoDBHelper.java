@@ -14,8 +14,8 @@ import company.Company;
 import dynamodb.item.CompanyItem;
 import dynamodb.item.DailyItem;
 import dynamodb.item.StatusItem;
-import enums.JobEnum;
-import enums.JobStatusEnum;
+import main.job.JobEnum;
+import main.job.JobStatusEnum;
 import util.CommonUtil;
 
 public class DynamoDBHelper {
@@ -64,13 +64,8 @@ public class DynamoDBHelper {
         DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());        
     }
     
-    /** Any DynamoDB specific helpers go below from here */
-    private class Capacity {
-        long read;
-        long write;
-    }
-    
-    public Capacity getCapacity(String tableName) {
+    /** Any DynamoDB specific helpers go below from here */    
+    public DynamoDBCapacity getCapacity(String tableName) {
         ProvisionedThroughputDescription throughput = DynamoDBProvider
            .getInstance()
            .getDynamoDB()
@@ -78,17 +73,17 @@ public class DynamoDBHelper {
            .getTable()
            .getProvisionedThroughput();
         
-        Capacity capacity = new Capacity();
-        capacity.read = throughput.getReadCapacityUnits();
-        capacity.write = throughput.getWriteCapacityUnits();
+        DynamoDBCapacity capacity = new DynamoDBCapacity(
+            throughput.getReadCapacityUnits(),
+            throughput.getWriteCapacityUnits());
         return capacity;
         
     }
     
     public void updateReadCapacity(String tableName, long readCapacity) {
-        Capacity capacity = getCapacity(tableName);
+        DynamoDBCapacity capacity = getCapacity(tableName);
         // DynamoDB throws exception if capacity is not actually changed, which is pretty dumb...
-        if (capacity.read == readCapacity) {
+        if (capacity.getRead() == readCapacity) {
             return;
         }
         
@@ -96,37 +91,38 @@ public class DynamoDBHelper {
             .withTableName(tableName)
             .withProvisionedThroughput(new ProvisionedThroughput()
                 .withReadCapacityUnits(readCapacity)
-                .withWriteCapacityUnits(capacity.write));                
+                .withWriteCapacityUnits(capacity.getWrite()));                
         DynamoDBProvider.getInstance().getDynamoDB().updateTable(request);        
     }
     
     public void updateWriteCapacity(String tableName, long writeCapacity) {
-        Capacity capacity = getCapacity(tableName);
+        DynamoDBCapacity capacity = getCapacity(tableName);
         // DynamoDB throws exception if capacity is not actually changed, which is pretty dumb...
-        if (capacity.write == writeCapacity) {
+        if (capacity.getWrite() == writeCapacity) {
             return;
         }
         
         UpdateTableRequest request = new UpdateTableRequest()
             .withTableName(tableName)
             .withProvisionedThroughput(new ProvisionedThroughput()
-                .withReadCapacityUnits(capacity.read)
+                .withReadCapacityUnits(capacity.getRead())
                 .withWriteCapacityUnits(writeCapacity));                
         DynamoDBProvider.getInstance().getDynamoDB().updateTable(request);
     }
     
-    public void updateCapacity(String tableName, long readCapacity, long writeCapacity) {
-        Capacity capacity = getCapacity(tableName);
+    public void updateCapacity(String tableName, DynamoDBCapacity targetCapacity) {
+        DynamoDBCapacity capacity = getCapacity(tableName);
         // DynamoDB throws exception if capacity is not actually changed, which is pretty dumb...
-        if (capacity.read == readCapacity && capacity.write == writeCapacity) {
+        if (capacity.getRead() == targetCapacity.getRead()
+            && capacity.getWrite() == targetCapacity.getWrite()) {
             return;
         }
         
         UpdateTableRequest request = new UpdateTableRequest()
             .withTableName(tableName)
             .withProvisionedThroughput(new ProvisionedThroughput()
-                .withReadCapacityUnits(readCapacity)
-                .withWriteCapacityUnits(writeCapacity));                
+                .withReadCapacityUnits(targetCapacity.getRead())
+                .withWriteCapacityUnits(targetCapacity.getWrite()));                
         DynamoDBProvider.getInstance().getDynamoDB().updateTable(request);
     }
      

@@ -21,9 +21,9 @@ public class CommonUtil {
 	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 	private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss Z");
-	private static final ZoneId pacificZoneId = ZoneId.of("America/Los_Angeles");
+	public static final ZoneId PACIFIC_ZONE_ID = ZoneId.of("America/Los_Angeles");
 	
-	private static final Logger log = LoggerFactory.getLogger(CommonUtil.class);
+//	private static final Logger log = LoggerFactory.getLogger(CommonUtil.class);
 	
 	/**
 	 * Get a DateTime object based on a date string
@@ -41,8 +41,7 @@ public class CommonUtil {
 	 * Get a time string based on hour and minute.
 	 * e.g. hour = 9, minute = 5 -> "09:05"
 	 */
-	public static String formatHourMinute(int hour, int minute) {
-	    LocalTime time = LocalTime.of(hour, minute);
+	public static String formatTime(LocalTime time) {
 	    return time.format(timeFormatter);
 	}
 	
@@ -76,31 +75,7 @@ public class CommonUtil {
 	}
 	
 	public static ZonedDateTime getPacificTimeNow() {
-	    return ZonedDateTime.now(pacificZoneId);
-	}
-		
-	/**
-	 * Helper method to schedule a daily job.
-	 * The hour and minute is assumed to be in PST time. 
-	 */
-	public static void scheduleDailyJob(Runnable runnable, int hour, int minute) {
-	    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-	    ZonedDateTime now = getPacificTimeNow();
-	    ZonedDateTime next = ZonedDateTime.of(
-	        now.getYear(),
-	        now.getMonth().getValue(),
-	        now.getDayOfMonth(),
-	        hour,
-	        minute,
-	        0,
-	        0,
-	        pacificZoneId);	    
-	    if (next.isBefore(now)) {
-            next = next.plusDays(1);
-        }
-	    Duration delay = Duration.between(now, next);	    
-	    executorService.scheduleAtFixedRate(runnable, delay.getSeconds(), 86400, TimeUnit.SECONDS);
-	    log.info(String.format("Job scheduled. Next job will be run at %s.", formatDateTime(next)));
+	    return ZonedDateTime.now(PACIFIC_ZONE_ID);
 	}
 	
 	public static <T> void requireNonNull(T obj, String objName) {

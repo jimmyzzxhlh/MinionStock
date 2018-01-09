@@ -1,23 +1,28 @@
-package company;
+package main.job;
 
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import company.Company;
 import download.DownloadHelper;
 import dynamodb.DynamoDBHelper;
 import dynamodb.DynamoDBProvider;
 import dynamodb.Status;
 import dynamodb.item.CompanyItem;
-import enums.JobEnum;
-import enums.JobStatusEnum;
-import util.CommonUtil;
 
-public class CompanyUpdater {
-    private static final int HOUR = 16;
-    private static final int MINUTE = 0;
-    private static final Logger log = LoggerFactory.getLogger(CompanyUpdater.class);
+public class UpdateCompanyJob implements Job {
+    private static final Logger log = LoggerFactory.getLogger(UpdateCompanyJob.class);
+
+    @Override
+    public void startJob() {
+        updateCompanies();
+        
+        JobUtil.scheduleDailyJob(() -> {        
+            updateCompanies();
+        }, JobEnum.UPDATE_COMPANY);        
+    }
     
     /**
      * Update companies from Nasdaq.
@@ -68,12 +73,5 @@ public class CompanyUpdater {
             status.setJobStatus(JobStatusEnum.FAILED);
             DynamoDBHelper.getInstance().saveStatus(status);
         }
-    }
-    
-    public void startJob() {
-        updateCompanies();        
-        CommonUtil.scheduleDailyJob(() -> {        
-            updateCompanies();
-        }, HOUR, MINUTE);        
     }
 }

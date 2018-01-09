@@ -119,5 +119,10 @@
       	<artifactId>commons-lang</artifactId>
       	<version>2.6</version>
       </dependency>
+      <dependency>
+      	<groupId>com.google.collections</groupId>
+      	<artifactId>google-collections</artifactId>
+      	<version>1.0-rc2</version>
+      </dependency>
   </dependencies>
 </project>

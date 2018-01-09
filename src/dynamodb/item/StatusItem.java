@@ -6,8 +6,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
 import dynamodb.DynamoDBConst;
 import dynamodb.Status;
-import enums.JobEnum;
-import enums.JobStatusEnum;
+import main.job.JobEnum;
+import main.job.JobStatusEnum;
 import util.CommonUtil;
 
 @DynamoDBTable(tableName=DynamoDBConst.TABLE_STATUS)

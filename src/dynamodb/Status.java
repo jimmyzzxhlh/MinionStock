@@ -4,8 +4,8 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
 import dynamodb.item.StatusItem;
-import enums.JobEnum;
-import enums.JobStatusEnum;
+import main.job.JobEnum;
+import main.job.JobStatusEnum;
 import util.CommonUtil;
 
 public class Status {

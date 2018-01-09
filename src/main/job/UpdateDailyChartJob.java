@@ -1,4 +1,4 @@
-package dynamodb;
+package main.job;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -17,29 +17,27 @@ import com.google.gson.reflect.TypeToken;
 import download.DownloadHelper;
 import download.iex.DailyData;
 import download.iex.IexUrlBuilder;
+import dynamodb.DynamoDBHelper;
+import dynamodb.DynamoDBProvider;
+import dynamodb.Status;
 import dynamodb.item.DailyItem;
-import enums.JobEnum;
-import enums.JobStatusEnum;
 import util.CommonUtil;
 
-public class DailyChartUpdater implements ChartUpdater {
+public class UpdateDailyChartJob implements Job {
     
 //    private static final long READ_CAPACITY = 20;
 //    private static final long WRITE_CAPACITY = 20;
     private static final long MAX_BATCH_SYMBOLS = 100;  // IEX supports up to 100 symbols in batch download.
-    private static final Logger log = LoggerFactory.getLogger(DailyChartUpdater.class);
+    private static final Logger log = LoggerFactory.getLogger(UpdateDailyChartJob.class);
     
     private final Gson g = new GsonBuilder().setLenient().create();
     private final Type type = new TypeToken<Map<String, Map<String, DailyData[]>>>(){}.getType(); 
     
-    private static final int HOUR = 17;
-    private static final int MINUTE = 0;
-    
     public void startJob() {
         updateDailyChart();
-        CommonUtil.scheduleDailyJob(() -> updateDailyChart(), HOUR, MINUTE);
+        JobUtil.scheduleDailyJob(() -> updateDailyChart(), JobEnum.UPDATE_DAILY_CHART);
         log.info(String.format("Scheduled a daily job to update daily chart at %s.",
-            CommonUtil.formatHourMinute(HOUR, MINUTE)));
+            CommonUtil.formatTime(JobUtil.getStartTime(JobEnum.UPDATE_DAILY_CHART))));
     }
     
     public void updateDailyChart() {
