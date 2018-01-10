@@ -13,30 +13,47 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 
 import dynamodb.DynamoDBCapacity;
+import dynamodb.DynamoDBConst;
 import util.CommonUtil;
 
 public class JobUtil {
     private static final Logger log = LoggerFactory.getLogger(JobUtil.class);
     
-    private static final ImmutableMap<JobEnum, LocalTime> jobStartTimeMap =
+    private static final ImmutableMap<JobEnum, JobConfig> jobConfigMap = 
         ImmutableMap.of(
-            JobEnum.UPDATE_COMPANY, LocalTime.of(16, 0),
-            JobEnum.UPDATE_DAILY_CHART, LocalTime.of(19, 0)  // IEX doesn't have daily data before 5 pm.
+            JobEnum.UPDATE_COMPANY,
+                new JobConfig()
+                    .withTableName(DynamoDBConst.TABLE_COMPANY)
+                    .withStartTime(LocalTime.of(16, 0)),
+             // IEX doesn't have daily data before 5 pm, possibly because of the post market volume.
+            JobEnum.UPDATE_DAILY_CHART,
+                new JobConfig()
+                    .withTableName(DynamoDBConst.TABLE_DAILY)                    
+                    .withStartTime(LocalTime.of(19, 0))
+                    .withCapacity(new DynamoDBCapacity(30, 20))
         );
-
-    private static final ImmutableMap<JobEnum, DynamoDBCapacity> jobCapacityMap = 
-        ImmutableMap.of(
-            JobEnum.UPDATE_DAILY_CHART, new DynamoDBCapacity(30, 20)
-        );
+    
+    public static boolean hasJobConfig(JobEnum job) {
+        return jobConfigMap.containsKey(job);
+    }
+    
+    public static JobConfig getJobConfig(JobEnum job) {
+        return jobConfigMap.get(job);
+    }
+    public static DynamoDBCapacity getCapacity(JobEnum job) {
+        return getJobConfig(job).getCapacity();
+    }
+    public static String getTableName(JobEnum job) {
+        return getJobConfig(job).getTableName();
+    }
     
     public static LocalTime getStartTime(JobEnum job) {
-        return jobStartTimeMap.get(job);
+        return getJobConfig(job).getStartTime();
     }
     
-    public static ImmutableMap<JobEnum, DynamoDBCapacity> getCapacityMap() {
-        return jobCapacityMap;
-    }
-    
+//    public static ImmutableMap<JobEnum, JobConfig> getConfigMap() {
+//        return jobConfigMap;
+//    }
     
     /**
      * Helper method to schedule a daily job.

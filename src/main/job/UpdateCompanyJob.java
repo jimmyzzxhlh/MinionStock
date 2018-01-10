@@ -31,7 +31,7 @@ public class UpdateCompanyJob implements Job {
         log.info("Checking if the companies have been updated today ...");
         Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.UPDATE_COMPANY).toStatus();        
         if (status.isUpdatedToday()) {
-            log.info("Companies have been updated at " + status.getLastUpdatedTime() + ". Skipping the update.");
+            log.info("Companies have been updated at " + status.getLastStartTime() + ". Skipping the update.");
             return;
         }
         

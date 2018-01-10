@@ -25,8 +25,6 @@ import util.CommonUtil;
 
 public class UpdateDailyChartJob implements Job {
     
-//    private static final long READ_CAPACITY = 20;
-//    private static final long WRITE_CAPACITY = 20;
     private static final long MAX_BATCH_SYMBOLS = 100;  // IEX supports up to 100 symbols in batch download.
     private static final Logger log = LoggerFactory.getLogger(UpdateDailyChartJob.class);
     
@@ -41,14 +39,10 @@ public class UpdateDailyChartJob implements Job {
     }
     
     public void updateDailyChart() {
-//        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
-//            READ_CAPACITY, WRITE_CAPACITY));
-//        DynamoDBHelper.getInstance().updateCapacity(DynamoDBConst.TABLE_DAILY, READ_CAPACITY, WRITE_CAPACITY);
-        
         log.info("Checking if the daily chart has been updated today ...");
         Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.UPDATE_DAILY_CHART).toStatus();        
         if (status.isUpdatedToday()) {
-            log.info("Companies have been updated at " + status.getLastUpdatedTime() + ". Skipping the update.");
+            log.info("Companies have been updated at " + status.getLastStartTime() + ". Skipping the update.");
             return;
         }
         
@@ -78,11 +72,6 @@ public class UpdateDailyChartJob implements Job {
             status.setJobStatus(JobStatusEnum.FAILED);
             DynamoDBHelper.getInstance().saveStatus(status);
         }
-        
-//        log.info(String.format("Updating read capacity to %d and write capacity to %d ...",
-//            DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT));            
-//        DynamoDBHelper.getInstance().updateCapacity(
-//            DynamoDBConst.TABLE_DAILY, DynamoDBConst.READ_CAPACITY_DEFAULT, DynamoDBConst.WRITE_CAPACITY_DEFAULT);        
     }
     
     private void batchUpdateDailyChart(List<String> symbols) {
@@ -138,7 +127,7 @@ public class UpdateDailyChartJob implements Job {
     
     private void saveStatus(Status status, String symbol) {
         status.setLastUpdatedSymbol(symbol);
-        status.setLastUpdatedTime(CommonUtil.getPacificTimeNow());
+        status.setLastStartTime(CommonUtil.getPacificTimeNow());
         DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());
     }
 }

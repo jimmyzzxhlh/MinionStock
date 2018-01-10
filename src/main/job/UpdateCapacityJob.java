@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dynamodb.DynamoDBCapacity;
 import dynamodb.DynamoDBHelper;
 import util.CommonUtil;
 
@@ -27,17 +26,25 @@ public class UpdateCapacityJob implements Job {
 
     private void updateCapacity() {
         for (JobEnum job : JobEnum.values()) {
-            if (!JobUtil.getCapacityMap().containsKey(job)) {
+            if (!JobUtil.hasJobConfig(job)) {
                 continue;
             }
+            
+            JobConfig config = JobUtil.getJobConfig(job);
+            if (config.getCapacity() == null) {
+                continue;
+            }
+            
             LocalTime time = JobUtil.getStartTime(job);
             LocalTime now = CommonUtil.getPacificTimeNow().toLocalTime();
             log.info(String.format("Start time for job %s is %s.", job.toString(), CommonUtil.formatTime(time)));
             if (now.plusMinutes(INTERVAL_IN_MINUTES).isAfter(time) &&
                 now.minusMinutes(INTERVAL_IN_MINUTES).isBefore(time)) {
-                log.info(String.format("The job is going to start within %d minutes. Updating capacity ...", INTERVAL_IN_MINUTES));
-                DynamoDBCapacity capacity = JobUtil.getCapacityMap().get(job);
-                DynamoDBHelper.getInstance().updateCapacity(tableName, targetCapacity);
+                log.info(String.format("The job is going to start within %d minutes at %s. Updating capacity ...",
+                    INTERVAL_IN_MINUTES, CommonUtil.formatTime(time)));
+                DynamoDBHelper.getInstance().updateCapacity(config.getTableName(), config.getCapacity());
+                log.info(String.format("Table %s capacity is updated to read = %d, write = %d",
+                    config.getTableName(), config.getCapacity().getRead(), config.getCapacity().getWrite()));
             }
         }
     }

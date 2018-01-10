@@ -60,7 +60,7 @@ public class DynamoDBHelper {
     }
     
     public void saveStatus(Status status) {
-        status.setLastUpdatedTime(CommonUtil.getPacificTimeNow());
+        status.setLastStartTime(CommonUtil.getPacificTimeNow());
         DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());        
     }
     

@@ -2,7 +2,9 @@ package test;
 
 /**
  * Update capacity on a regular basis
- * Create a JobMetadata class for storing job capacity needed, job table, job start time.
+ * Check if a job has been completed today.
+ * May need to change updatecapacityjob to updatecjobstatus to update both job status and capacity.
+ * Also need to change capacity back to default.
  *
  */
 public class Todo {

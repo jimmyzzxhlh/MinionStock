@@ -14,7 +14,8 @@ import util.CommonUtil;
 public class StatusItem implements DynamoDBItem {
     private String job;
     private String lastUpdatedSymbol;
-    private String lastUpdatedTime;
+    private String lastStartTime;
+    private String lastEndTime;
     private String jobStatus;
     
     @DynamoDBHashKey(attributeName="J")
@@ -25,9 +26,13 @@ public class StatusItem implements DynamoDBItem {
     public String getLastUpdatedSymbol() { return lastUpdatedSymbol; }    
     public void setLastUpdatedSymbol(String lastUpdatedSymbol) { this.lastUpdatedSymbol = lastUpdatedSymbol; }
     
-    @DynamoDBAttribute(attributeName="LUT")
-    public String getLastUpdatedTime() { return lastUpdatedTime; }
-    public void setLastUpdatedTime(String lastUpdatedTime) { this.lastUpdatedTime = lastUpdatedTime; }
+    @DynamoDBAttribute(attributeName="LST")
+    public String getLastStartTime() { return lastStartTime; }
+    public void setLastStartTime(String lastStartTime) { this.lastStartTime = lastStartTime; }
+    
+    @DynamoDBAttribute(attributeName="LET")
+    public String getLastEndTime() { return lastEndTime; }
+    public void setLastEndTime(String lastEndTime) { this.lastEndTime = lastEndTime; }
     
     @DynamoDBAttribute(attributeName="JS")
     public String getJobStatus() { return jobStatus; }
@@ -37,8 +42,11 @@ public class StatusItem implements DynamoDBItem {
         Status status = new Status();
         status.setJob(JobEnum.get(job));
         status.setLastUpdatedSymbol(lastUpdatedSymbol);
-        if (lastUpdatedTime != null) {
-            status.setLastUpdatedTime(CommonUtil.parseDateTime(lastUpdatedTime));        
+        if (lastStartTime != null) {
+            status.setLastStartTime(CommonUtil.parseDateTime(lastStartTime));        
+        }
+        if (lastEndTime != null) {
+            status.setLastEndTime(CommonUtil.parseDateTime(lastEndTime));
         }
         if (jobStatus != null) {
             status.setJobStatus(JobStatusEnum.get(jobStatus));

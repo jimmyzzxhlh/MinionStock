@@ -1,7 +1,6 @@
 package dynamodb;
 
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 
 import dynamodb.item.StatusItem;
 import main.job.JobEnum;
@@ -11,7 +10,8 @@ import util.CommonUtil;
 public class Status {
     private JobEnum job;
     private String lastUpdatedSymbol;
-    private ZonedDateTime lastUpdatedTime;
+    private ZonedDateTime lastStartTime;
+    private ZonedDateTime lastEndTime;
     private JobStatusEnum jobStatus;
     
     public JobEnum getJob() {
@@ -26,11 +26,17 @@ public class Status {
     public void setLastUpdatedSymbol(String lastUpdatedSymbol) {
         this.lastUpdatedSymbol = lastUpdatedSymbol;
     }
-    public ZonedDateTime getLastUpdatedTime() {
-        return lastUpdatedTime;
+    public ZonedDateTime getLastStartTime() {
+        return lastStartTime;
     }
-    public void setLastUpdatedTime(ZonedDateTime lastUpdatedTime) {
-        this.lastUpdatedTime = lastUpdatedTime;
+    public void setLastStartTime(ZonedDateTime lastStartTime) {
+        this.lastStartTime = lastStartTime;
+    }    
+    public ZonedDateTime getLastEndTime() {
+        return lastEndTime;
+    }
+    public void setLastEndTime(ZonedDateTime lastEndTime) {
+        this.lastEndTime = lastEndTime;
     }
     public JobStatusEnum getJobStatus() {
         return jobStatus;
@@ -43,8 +49,11 @@ public class Status {
         StatusItem item = new StatusItem();
         item.setJob(job.toString());  // This cannot be null as it is the hash key.
         item.setLastUpdatedSymbol(lastUpdatedSymbol);
-        if (lastUpdatedTime != null) {
-            item.setLastUpdatedTime(CommonUtil.formatDateTime(lastUpdatedTime));
+        if (lastStartTime != null) {
+            item.setLastStartTime(CommonUtil.formatDateTime(lastStartTime));
+        }
+        if (lastEndTime != null) {
+            item.setLastEndTime(CommonUtil.formatDateTime(lastEndTime));
         }
         if (jobStatus != null) {
             item.setJobStatus(jobStatus.toString());
@@ -53,17 +62,18 @@ public class Status {
     }
     
     public boolean isUpdatedToday() {
-        if (lastUpdatedTime == null) return false;
+        if (lastStartTime == null) return false;
         return jobStatus == JobStatusEnum.DONE &&
-            lastUpdatedTime.toLocalDate().equals(CommonUtil.getPacificTimeNow().toLocalDate());        
+            lastStartTime.toLocalDate().equals(CommonUtil.getPacificTimeNow().toLocalDate());        
     }
     
     @Override
     public String toString() {
-        return String.format("job = %s, lastUpdatedSymbol = %s, lastUpdatedTime = %s, jobStatus = %s",
+        return String.format("job = %s, lastUpdatedSymbol = %s, lastStartTime = %s, lastEndTime = %s, jobStatus = %s",
             job == null ? "null" : job.toString(),
             lastUpdatedSymbol,
-            lastUpdatedTime == null ? "null" : CommonUtil.formatDateTime(lastUpdatedTime),
+            lastStartTime == null ? "null" : CommonUtil.formatDateTime(lastStartTime),
+            lastEndTime == null ? "null" : CommonUtil.formatDateTime(lastEndTime),
             jobStatus == null ? "null" : jobStatus.toString());
     }
 }
