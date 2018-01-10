@@ -42,11 +42,17 @@ public class UpdateDailyChartJob implements Job {
         log.info("Checking if the daily chart has been updated today ...");
         Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.UPDATE_DAILY_CHART).toStatus();        
         if (status.isUpdatedToday()) {
-            log.info("Companies have been updated at " + status.getLastStartTime() + ". Skipping the update.");
+            log.info(String.format("Daily chart has been updated from %s to %s. Update skipped.",
+                status.getLastStartTime(), status.getLastEndTime()));
             return;
+        }
+        else {
+            log.info(String.format("Daily chart was updated at %s which is more than one day ago.",
+                status.getLastStartTime()));
         }
         
         log.info("Start updating daily chart ...");
+        status.setLastStartTime(CommonUtil.getPacificTimeNow());
         status.setJobStatus(JobStatusEnum.UPDATING);
         DynamoDBHelper.getInstance().saveStatus(status);
         
@@ -123,11 +129,5 @@ public class UpdateDailyChartJob implements Job {
             }            
             log.info(String.format("Done saving %d items for %s.", dataList.size(), symbol));            
         }
-    }
-    
-    private void saveStatus(Status status, String symbol) {
-        status.setLastUpdatedSymbol(symbol);
-        status.setLastStartTime(CommonUtil.getPacificTimeNow());
-        DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());
     }
 }

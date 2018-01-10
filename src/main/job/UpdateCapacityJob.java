@@ -10,7 +10,8 @@ import dynamodb.DynamoDBHelper;
 import util.CommonUtil;
 
 /**
- * This job checks whether the other jobs are about to start and adjust the capacity that 
+ * This job does several things related to job configuration and status.
+ * - Checks whether the other jobs are about to start and adjust the capacity that 
  * they need. 
  */
 public class UpdateCapacityJob implements Job {
@@ -21,17 +22,22 @@ public class UpdateCapacityJob implements Job {
     @Override
     public void startJob() {
         JobUtil.scheduleFixRateJob(() -> updateCapacity(), INTERVAL_IN_MINUTES, TimeUnit.MINUTES);
-        log.info(String.format("Scheduled a job to check capacity every %d minutes.", INTERVAL_IN_MINUTES));
+        log.info(String.format("Scheduled a job to update job configuration and status every %d minutes.",
+            INTERVAL_IN_MINUTES));
     }
-
+    
     private void updateCapacity() {
+        log.info("Start updating table capacity ...");
         for (JobEnum job : JobEnum.values()) {
             if (!JobUtil.hasJobConfig(job)) {
+                log.info(String.format("Job %s does not have a configuration, skipped.", job.toString()));                
                 continue;
             }
             
             JobConfig config = JobUtil.getJobConfig(job);
             if (config.getCapacity() == null) {
+                log.info(String.format("Job %s does not have configuration for capacity, skipped.",
+                    job.toString()));
                 continue;
             }
             
@@ -46,6 +52,11 @@ public class UpdateCapacityJob implements Job {
                 log.info(String.format("Table %s capacity is updated to read = %d, write = %d",
                     config.getTableName(), config.getCapacity().getRead(), config.getCapacity().getWrite()));
             }
+            else {
+                log.info(String.format("%s job is not going to start soon, capacity not updated.",
+                    job.toString()));
+            }
         }
+        log.info("Table capacity update is done.");
     }
 }

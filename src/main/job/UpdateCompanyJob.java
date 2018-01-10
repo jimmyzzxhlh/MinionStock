@@ -11,6 +11,7 @@ import dynamodb.DynamoDBHelper;
 import dynamodb.DynamoDBProvider;
 import dynamodb.Status;
 import dynamodb.item.CompanyItem;
+import util.CommonUtil;
 
 public class UpdateCompanyJob implements Job {
     private static final Logger log = LoggerFactory.getLogger(UpdateCompanyJob.class);
@@ -31,11 +32,17 @@ public class UpdateCompanyJob implements Job {
         log.info("Checking if the companies have been updated today ...");
         Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.UPDATE_COMPANY).toStatus();        
         if (status.isUpdatedToday()) {
-            log.info("Companies have been updated at " + status.getLastStartTime() + ". Skipping the update.");
+            log.info(String.format("Companies have been updated from %s to %s. Update skipped.",
+                status.getLastStartTime(), status.getLastEndTime()));
             return;
+        }
+        else {
+            log.info(String.format("Companies were updated at %s which is more than one day ago.",
+                status.getLastStartTime()));
         }
         
         log.info("Start updating companies from Nasdaq ...");
+        status.setLastStartTime(CommonUtil.getPacificTimeNow());
         status.setJobStatus(JobStatusEnum.UPDATING);
         DynamoDBHelper.getInstance().saveStatus(status);
         
