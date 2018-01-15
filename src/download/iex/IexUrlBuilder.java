@@ -5,11 +5,10 @@ import java.util.List;
 import org.apache.commons.lang.StringUtils;
 
 public class IexUrlBuilder {
-    private static final String BASE_URL = "https://api.iextrading.com/1.0/stock/";
-    
     private enum DataType {
         CHART("chart"),
-        STATS("stats");
+        STATS("stats"),
+        DIVIDENDS("dividends");
         
         private String dataType;
         private DataType(String dataType) {
@@ -74,6 +73,11 @@ public class IexUrlBuilder {
         return this;
     }
     
+    public IexUrlBuilder withDividends() {
+        this.dataType = DataType.DIVIDENDS;
+        return this;
+    }
+    
     public IexUrlBuilder withOneDay() {
         this.timeRange = TimeRange.ONE_DAY;
         return this;
@@ -107,10 +111,12 @@ public class IexUrlBuilder {
         if (symbols == null) {
             return "";
         }
-        StringBuilder sb = new StringBuilder(BASE_URL).append("market/batch?");
+        StringBuilder sb = new StringBuilder(IexConst.BASE_URL).append("market/batch?");
+        sb.append("types=");
         switch (dataType) {
         case CHART:
-            sb.append("types=chart");
+        case DIVIDENDS:
+            sb.append(dataType.toString());
             break;
         default:
             break;
@@ -128,18 +134,18 @@ public class IexUrlBuilder {
             return "";
         }
         
-        StringBuilder sb = new StringBuilder(BASE_URL);        
+        StringBuilder sb = new StringBuilder(IexConst.BASE_URL);
+        sb.append(symbol.toLowerCase())
+          .append("/")
+          .append(dataType.toString())
+          .append("/");
         switch (dataType) {
         case CHART:
-            sb.append(symbol.toLowerCase())
-              .append("/")
-              .append(dataType.toString())
-              .append("/")
-              .append(timeRange.toString());
+        case DIVIDENDS:
+            sb.append(timeRange.toString());
             break;
         case STATS:
-            sb.append(symbol.toLowerCase())
-              .append("/stats");              
+            break;            
         default:
             break;
         }

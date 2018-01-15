@@ -16,67 +16,41 @@ import com.google.gson.reflect.TypeToken;
 
 import download.DownloadHelper;
 import download.iex.DailyData;
+import download.iex.IexConst;
 import download.iex.IexUrlBuilder;
 import dynamodb.DynamoDBHelper;
 import dynamodb.DynamoDBProvider;
-import dynamodb.Status;
 import dynamodb.item.DailyItem;
-import util.CommonUtil;
+import exceptions.JobException;
 
-public class UpdateDailyChartJob implements Job {
-    
-    private static final long MAX_BATCH_SYMBOLS = 100;  // IEX supports up to 100 symbols in batch download.
+public class UpdateDailyChartJob extends DailyJob {    
     private static final Logger log = LoggerFactory.getLogger(UpdateDailyChartJob.class);
     
     private final Gson g = new GsonBuilder().setLenient().create();
-    private final Type type = new TypeToken<Map<String, Map<String, DailyData[]>>>(){}.getType(); 
+    private final Type type = new TypeToken<Map<String, Map<String, DailyData[]>>>(){}.getType();
     
-    public void startJob() {
-        updateDailyChart();
-        JobUtil.scheduleDailyJob(() -> updateDailyChart(), JobEnum.UPDATE_DAILY_CHART);
-        log.info(String.format("Scheduled a daily job to update daily chart at %s.",
-            CommonUtil.formatTime(JobUtil.getStartTime(JobEnum.UPDATE_DAILY_CHART))));
+    public UpdateDailyChartJob() {
+        super(JobEnum.UPDATE_DAILY_CHART);         
     }
     
-    public void updateDailyChart() {
-        log.info("Checking if the daily chart has been updated today ...");
-        Status status = DynamoDBHelper.getInstance().getStatusItem(JobEnum.UPDATE_DAILY_CHART).toStatus();        
-        if (status.isUpdatedToday()) {
-            log.info(String.format("Daily chart has been updated from %s to %s. Update skipped.",
-                status.getLastStartTime(), status.getLastEndTime()));
-            return;
-        }
-        else {
-            log.info(String.format("Daily chart was updated at %s which is more than one day ago.",
-                status.getLastStartTime()));
-        }
-        
-        log.info("Start updating daily chart ...");
-        status.setLastStartTime(CommonUtil.getPacificTimeNow());
-        status.setJobStatus(JobStatusEnum.UPDATING);
-        DynamoDBHelper.getInstance().saveStatus(status);
-        
-        try {
+    @Override
+    public void doUpdate() throws JobException {
+        try {            
             List<String> symbols = new ArrayList<>(); 
-        
+    
             for (String symbol : DownloadHelper.downloadCompanies().keySet()) {
                 symbols.add(symbol);
-                if (symbols.size() == MAX_BATCH_SYMBOLS) {
+                if (symbols.size() == IexConst.MAX_BATCH_SYMBOLS) {
                     batchUpdateDailyChart(symbols);
                     symbols.clear();                
                 }                        
             }
             if (symbols.size() > 0) {
                 batchUpdateDailyChart(symbols);
-            }        
-            log.info("Done updating daily chart.");
-            status.setJobStatus(JobStatusEnum.DONE);
-            DynamoDBHelper.getInstance().saveStatus(status);
+            }
         }
         catch (Exception e) {
-            log.error("Failed to update daily chart: ", e);
-            status.setJobStatus(JobStatusEnum.FAILED);
-            DynamoDBHelper.getInstance().saveStatus(status);
+            throw new JobException(e);
         }
     }
     
@@ -101,7 +75,7 @@ public class UpdateDailyChartJob implements Job {
         Map<String, Map<String, DailyData[]>> dataMap = g.fromJson(str, type);        
         for (String symbol : symbols) {
             log.info("Checking the last updated daily chart downloaded for " + symbol + " ...");
-            DailyItem lastItem = DynamoDBHelper.getInstance().getLastDailyItem(symbol);
+            DailyItem lastItem = DynamoDBHelper.getInstance().getLastItem(new DailyItem(symbol), DailyItem.class);
             List<DailyData> dataList = Arrays.asList(dataMap.get(symbol).get("chart"));
             if (lastItem == null) {
                 log.info("Cannot find last updated item for " + symbol + ". Is this a new symbol?");

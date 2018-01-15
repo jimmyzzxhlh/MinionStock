@@ -14,6 +14,8 @@ import com.google.common.collect.ImmutableMap;
 
 import dynamodb.DynamoDBCapacity;
 import dynamodb.DynamoDBConst;
+import dynamodb.DynamoDBProvider;
+import dynamodb.Status;
 import util.CommonUtil;
 
 public class JobUtil {
@@ -24,13 +26,23 @@ public class JobUtil {
             JobEnum.UPDATE_COMPANY,
                 new JobConfig()
                     .withTableName(DynamoDBConst.TABLE_COMPANY)
-                    .withStartTime(LocalTime.of(16, 0)),
+                    .withStartTime(LocalTime.of(16, 0))
+                    .withJobTarget("Company List"),
              // IEX doesn't have daily data before 5 pm, possibly because of the post market volume.
             JobEnum.UPDATE_DAILY_CHART,
                 new JobConfig()
                     .withTableName(DynamoDBConst.TABLE_DAILY)                    
                     .withStartTime(LocalTime.of(19, 0))
-                    .withCapacity(new DynamoDBCapacity(30, 20))
+                    .withWorkCapacity(new DynamoDBCapacity(30, 30))
+                    .withIdleCapacity(new DynamoDBCapacity(5, 1))
+                    .withJobTarget("Daily Chart"),
+            JobEnum.UPDATE_DIVIDEND,
+                new JobConfig()
+                    .withTableName(DynamoDBConst.TABLE_DIVIDEND)
+                    .withStartTime(LocalTime.of(16, 15))
+                    .withWorkCapacity(new DynamoDBCapacity(30, 30))
+                    .withIdleCapacity(new DynamoDBCapacity(5, 1))
+                    .withJobTarget("Dividend")
         );
     
     public static boolean hasJobConfig(JobEnum job) {
@@ -41,7 +53,7 @@ public class JobUtil {
         return jobConfigMap.get(job);
     }
     public static DynamoDBCapacity getCapacity(JobEnum job) {
-        return getJobConfig(job).getCapacity();
+        return getJobConfig(job).getWorkCapacity();
     }
     public static String getTableName(JobEnum job) {
         return getJobConfig(job).getTableName();
@@ -49,6 +61,25 @@ public class JobUtil {
     
     public static LocalTime getStartTime(JobEnum job) {
         return getJobConfig(job).getStartTime();
+    }
+    
+    /**
+     * Save the start status into DynamoDB. Update start time and clear end time.
+     */
+    public static void saveStartStatus(Status status) {
+        status.setLastStartTime(CommonUtil.getPacificTimeNow());
+        status.setLastEndTime(null);
+        status.setJobStatus(JobStatusEnum.UPDATING);
+        DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());
+    }
+    
+    /**
+     * Save the end status into DynamoDB. Update end time and status (the status can be failed though).
+     */
+    public static void saveEndStatus(Status status, JobStatusEnum jobStatus) {
+        status.setLastEndTime(CommonUtil.getPacificTimeNow());
+        status.setJobStatus(jobStatus);
+        DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());
     }
     
 //    public static ImmutableMap<JobEnum, JobConfig> getConfigMap() {

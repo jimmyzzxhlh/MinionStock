@@ -1,6 +1,7 @@
 package download.iex;
 
 import dynamodb.item.DailyItem;
+import util.CommonUtil;
 
 public class DailyData {
 	private String date;
@@ -11,8 +12,11 @@ public class DailyData {
 	private long volume;
 	private double vwap;  //Volume weighted average price 
 
+	/**
+	 * Get the date without hyphen! 
+	 */
 	public String getDate() {
-		return date;
+	    return date == null ? null : CommonUtil.removeHyphen(date);	    
 	}
 	public void setDate(String date) {
 		this.date = date;
@@ -63,7 +67,7 @@ public class DailyData {
     public DailyItem toDailyItem(String symbol) { 
         DailyItem item = new DailyItem();
         item.setSymbol(symbol);
-        item.setDate(date.replace("-", ""));
+        item.setDate(getDate());
         item.setOpen(open > 0 ? open : close);
         item.setClose(close);
         item.setHigh(high > 0 ? high : close);
@@ -76,7 +80,7 @@ public class DailyData {
     
     @Override
     public String toString() {
-        return String.format("date = %s, open = %d, close = %d, high = %d, low = %d, vwap = %d, volume = %d",
-            date, open, close, high, low, vwap, volume);
+        return String.format("date = %s, open = %f, close = %f, high = %f, low = %f, vwap = %f, volume = %d",
+            getDate(), open, close, high, low, vwap, volume);
     }
 }

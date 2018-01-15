@@ -12,11 +12,8 @@ import com.amazonaws.services.dynamodbv2.model.UpdateTableRequest;
 
 import company.Company;
 import dynamodb.item.CompanyItem;
-import dynamodb.item.DailyItem;
 import dynamodb.item.StatusItem;
 import main.job.JobEnum;
-import main.job.JobStatusEnum;
-import util.CommonUtil;
 
 public class DynamoDBHelper {
 	
@@ -41,27 +38,26 @@ public class DynamoDBHelper {
         return map;
     }
     
-    public StatusItem getStatusItem(JobEnum state) {
-        return DynamoDBProvider.getInstance().getMapper().load(StatusItem.class, state.toString());
+    public Status getStatus(JobEnum state) {
+        return DynamoDBProvider.getInstance().getMapper().load(StatusItem.class, state.toString()).toStatus();
     }
 
-    public DailyItem getLastDailyItem(String symbol) {
-        DynamoDBQueryExpression<DailyItem> queryExpression = new DynamoDBQueryExpression<DailyItem>()
+    /**
+     * Get the item with the highest range key from DynamoDB given the hash key. 
+     * @param itemWithHashKey An item with the hash key set only (e.g. symbol)
+     */
+    public <T> T getLastItem(T itemWithHashKey, Class<T> clazz) {
+        DynamoDBQueryExpression<T> queryExpression = new DynamoDBQueryExpression<T>()
             .withLimit(1)
             .withScanIndexForward(false)
-            .withHashKeyValues(new DailyItem(symbol));              
-        List<DailyItem> result =
+            .withHashKeyValues(itemWithHashKey);              
+        List<T> result =
             DynamoDBProvider.getInstance().getMapper()
-                .queryPage(DailyItem.class, queryExpression).getResults();
+                .queryPage(clazz, queryExpression).getResults();
         if (result.size() == 0) {   
             return null;
         }
         return result.get(0);
-    }
-    
-    public void saveStatus(Status status) {
-        status.setLastEndTime(CommonUtil.getPacificTimeNow());
-        DynamoDBProvider.getInstance().getMapper().save(status.toStatusItem());        
     }
     
     /** Any DynamoDB specific helpers go below from here */    

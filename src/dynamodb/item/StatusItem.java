@@ -17,6 +17,7 @@ public class StatusItem implements DynamoDBItem {
     private String lastStartTime;
     private String lastEndTime;
     private String jobStatus;
+    private boolean isTesting;
     
     @DynamoDBHashKey(attributeName="J")
     public String getJob() { return job; }
@@ -38,10 +39,15 @@ public class StatusItem implements DynamoDBItem {
     public String getJobStatus() { return jobStatus; }
     public void setJobStatus(String jobStatus) { this.jobStatus = jobStatus; }
     
+    @DynamoDBAttribute(attributeName="T")
+    public boolean isTesting() { return isTesting; }
+    public void setTesting(boolean isTesting) { this.isTesting = isTesting; }
+    
     public Status toStatus() {
         Status status = new Status();
         status.setJob(JobEnum.get(job));
         status.setLastUpdatedSymbol(lastUpdatedSymbol);
+        status.setTesting(isTesting);
         if (lastStartTime != null) {
             status.setLastStartTime(CommonUtil.parseDateTime(lastStartTime));        
         }
@@ -53,5 +59,5 @@ public class StatusItem implements DynamoDBItem {
         }
         
         return status;
-    }
+    }    
 }

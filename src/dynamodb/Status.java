@@ -13,6 +13,7 @@ public class Status {
     private ZonedDateTime lastStartTime;
     private ZonedDateTime lastEndTime;
     private JobStatusEnum jobStatus;
+    private boolean isTesting;
     
     public JobEnum getJob() {
         return job;
@@ -44,36 +45,40 @@ public class Status {
     public void setJobStatus(JobStatusEnum jobStatus) {
         this.jobStatus = jobStatus;
     }
+    public boolean isTesting() {
+        return isTesting;
+    }
+    public void setTesting(boolean isTesting) {
+        this.isTesting = isTesting;
+    }
     
     public StatusItem toStatusItem() {
         StatusItem item = new StatusItem();
         item.setJob(job.toString());  // This cannot be null as it is the hash key.
         item.setLastUpdatedSymbol(lastUpdatedSymbol);
-        if (lastStartTime != null) {
-            item.setLastStartTime(CommonUtil.formatDateTime(lastStartTime));
-        }
-        if (lastEndTime != null) {
-            item.setLastEndTime(CommonUtil.formatDateTime(lastEndTime));
-        }
-        if (jobStatus != null) {
-            item.setJobStatus(jobStatus.toString());
-        }
+        item.setLastStartTime(lastStartTime == null ? "" : CommonUtil.formatDateTime(lastStartTime));
+        item.setLastEndTime(lastEndTime == null ? "" : CommonUtil.formatDateTime(lastEndTime));
+        item.setJobStatus(jobStatus == null ? "" : jobStatus.toString());
+        item.setTesting(isTesting);
+        
         return item;
     }
     
     public boolean isUpdatedToday() {
-        if (lastStartTime == null) return false;
+        if (lastStartTime == null || lastEndTime == null) return false;
         return jobStatus == JobStatusEnum.DONE &&
             lastStartTime.toLocalDate().equals(CommonUtil.getPacificTimeNow().toLocalDate());        
     }
     
     @Override
     public String toString() {
-        return String.format("job = %s, lastUpdatedSymbol = %s, lastStartTime = %s, lastEndTime = %s, jobStatus = %s",
+        return String.format("job = %s, lastUpdatedSymbol = %s, lastStartTime = %s, lastEndTime = %s, " +
+            "jobStatus = %s, isTesting = %s",
             job == null ? "null" : job.toString(),
             lastUpdatedSymbol,
             lastStartTime == null ? "null" : CommonUtil.formatDateTime(lastStartTime),
             lastEndTime == null ? "null" : CommonUtil.formatDateTime(lastEndTime),
-            jobStatus == null ? "null" : jobStatus.toString());
+            jobStatus == null ? "null" : jobStatus.toString(),
+            isTesting);
     }
 }

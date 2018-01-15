@@ -6,7 +6,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dynamodb.DynamoDBCapacity;
 import dynamodb.DynamoDBHelper;
+import dynamodb.Status;
 import util.CommonUtil;
 
 /**
@@ -29,34 +31,72 @@ public class UpdateCapacityJob implements Job {
     private void updateCapacity() {
         log.info("Start updating table capacity ...");
         for (JobEnum job : JobEnum.values()) {
+            // Skip if there is no configuration.
             if (!JobUtil.hasJobConfig(job)) {
-                log.info(String.format("Job %s does not have a configuration, skipped.", job.toString()));                
                 continue;
-            }
             
+            }
+            // Skip if there is no configuration for capacity.
             JobConfig config = JobUtil.getJobConfig(job);
-            if (config.getCapacity() == null) {
-                log.info(String.format("Job %s does not have configuration for capacity, skipped.",
-                    job.toString()));
+            if (config.getWorkCapacity() == null) {
                 continue;
             }
             
-            LocalTime time = JobUtil.getStartTime(job);
-            LocalTime now = CommonUtil.getPacificTimeNow().toLocalTime();
-            log.info(String.format("Start time for job %s is %s.", job.toString(), CommonUtil.formatTime(time)));
-            if (now.plusMinutes(INTERVAL_IN_MINUTES).isAfter(time) &&
-                now.minusMinutes(INTERVAL_IN_MINUTES).isBefore(time)) {
-                log.info(String.format("The job is going to start within %d minutes at %s. Updating capacity ...",
-                    INTERVAL_IN_MINUTES, CommonUtil.formatTime(time)));
-                DynamoDBHelper.getInstance().updateCapacity(config.getTableName(), config.getCapacity());
-                log.info(String.format("Table %s capacity is updated to read = %d, write = %d",
-                    config.getTableName(), config.getCapacity().getRead(), config.getCapacity().getWrite()));
+            // Check the job status. If the job is in testing mode, no update will be done.
+            Status status = DynamoDBHelper.getInstance().getStatus(job);
+            if (status.isTesting()) {
+                log.info(String.format("Job %s is in testing mode. No capacity update is done.", job.toString()));
+                continue;
             }
-            else {
-                log.info(String.format("%s job is not going to start soon, capacity not updated.",
-                    job.toString()));
+            
+            String tableName = config.getTableName();
+            DynamoDBCapacity currentCapacity = DynamoDBHelper.getInstance().getCapacity(tableName);            
+            // If the job is finished today, downgrade the capacity to default.            
+            if (status.isUpdatedToday()) {
+                log.info(String.format("Job %s is finished at %s today.",
+                    job.toString(), CommonUtil.formatDateTime(status.getLastEndTime())));
+                if (currentCapacity.equals(config.getIdleCapacity())) {
+                    log.info(String.format("Capacity for table %s has already been set to %s. No capacity update is done.",
+                        tableName, currentCapacity.toString()));
+                }
+                else {                    
+                    updateCapacityForTable(config.getTableName(), config.getIdleCapacity());
+                }
+                continue;
+            }
+            
+            // Check if the job is about to start. If yes, upgrade the capacity.
+            if (isJobGoingToStart(job)) {
+                if (currentCapacity.equals(config.getWorkCapacity())) {
+                    log.info(String.format("Capacity for table %s has already been set to %s. No capacity update is done.",
+                        tableName, currentCapacity.toString()));
+                }
+                updateCapacityForTable(config.getTableName(), config.getWorkCapacity());                
             }
         }
-        log.info("Table capacity update is done.");
+        log.info("Table capacity update job is done.");        
+    }
+    
+    private boolean isJobGoingToStart(JobEnum job) {
+        LocalTime startTime = JobUtil.getStartTime(job);
+        LocalTime now = CommonUtil.getPacificTimeNow().toLocalTime();
+        log.info(String.format("Start time for job %s is %s.", job.toString(), CommonUtil.formatTime(startTime)));
+        if (now.plusMinutes(INTERVAL_IN_MINUTES).isAfter(startTime) &&
+            now.minusMinutes(INTERVAL_IN_MINUTES).isBefore(startTime)) {
+            log.info(String.format("Job %s is going to start within %d minutes at %s.",
+                job.toString(), INTERVAL_IN_MINUTES, CommonUtil.formatTime(now)));
+            return true;
+        }
+        else {
+            log.info(String.format("%s job is not going to start soon.",
+                job.toString()));
+            return false;
+        }
+    }
+    
+    private void updateCapacityForTable(String tableName, DynamoDBCapacity capacity) {
+        log.info(String.format("Updating capacity for table %s ...", tableName));
+        DynamoDBHelper.getInstance().updateCapacity(tableName, capacity);
+        log.info(String.format("Table %s capacity is updated to %s.", tableName, capacity.toString()));
     }
 }

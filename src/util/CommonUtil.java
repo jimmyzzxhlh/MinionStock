@@ -1,5 +1,6 @@
 package util;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,11 +18,16 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.jollyday.HolidayCalendar;
+import de.jollyday.HolidayManager;
+
 public class CommonUtil {
 	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 	private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss Z");
+	private static final HolidayManager holidayManager = HolidayManager.getInstance(HolidayCalendar.UNITED_STATES);
 	public static final ZoneId PACIFIC_ZONE_ID = ZoneId.of("America/Los_Angeles");
+	
 	
 //	private static final Logger log = LoggerFactory.getLogger(CommonUtil.class);
 	
@@ -35,6 +41,17 @@ public class CommonUtil {
 	
 	public static String formatDate(LocalDate date) {
 	    return date.format(dateFormatter);
+	}
+	
+	public static boolean isMarketClosedToday() {
+	    LocalDate date = getPacificTimeNow().toLocalDate();
+	    return date.getDayOfWeek() == DayOfWeek.SATURDAY ||
+            date.getDayOfWeek() == DayOfWeek.SUNDAY ||
+            holidayManager.isHoliday(date);
+	}
+	
+	public static String removeHyphen(String dateString) {
+	    return dateString == null ? null : dateString.replace("-", "");
 	}
 	
 	/**
