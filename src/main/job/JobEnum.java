@@ -7,6 +7,7 @@ public enum JobEnum {
     UPDATE_COMPANY("UpdateCompany"),
     UPDATE_DAILY_CHART("UpdateDailyChart"),
     UPDATE_DIVIDEND("UpdateDividend"),
+    UPDATE_SPLITS("UpdateSplits"),
     BACKFILL_DAILY_CHART("BackfillDailyChart");
     
     private final String enumStr;

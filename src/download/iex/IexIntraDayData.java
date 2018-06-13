@@ -10,7 +10,7 @@ import dynamodb.item.IntraDayItem;
  * Note: We get data from market* fields because the normal fields do not really return the
  * actual data for some reason. 
  */
-public class IntraDayData {
+public class IexIntraDayData {
 	private String date;
 	private String minute;	
 	@SerializedName("marketHigh") private double high;

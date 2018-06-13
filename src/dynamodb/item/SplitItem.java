@@ -7,13 +7,11 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
 import dynamodb.DynamoDBConst;
 
-@DynamoDBTable(tableName=DynamoDBConst.TABLE_DIVIDEND)
-public class DividendItem implements DynamoDBItem {
+@DynamoDBTable(tableName=DynamoDBConst.TABLE_SPLIT)
+public class SplitItem {
     private String symbol;
-    private String date;    
-    private double amount;
-    
-    public DividendItem() {}
+    private String date;
+    private double factor;
     
     @DynamoDBHashKey(attributeName="S")
     public String getSymbol() { return symbol; }
@@ -23,7 +21,7 @@ public class DividendItem implements DynamoDBItem {
     public String getDate() { return date; }
     public void setDate(String date) { this.date = date; }
     
-    @DynamoDBAttribute(attributeName="A")
-    public double getAmount() { return amount; }
-    public void setAmount(double amount) { this.amount = amount; }
+    @DynamoDBAttribute(attributeName="F")
+    public double getFactor() { return factor; }
+    public void setFactor(double factor) { this.factor = factor; }    
 }

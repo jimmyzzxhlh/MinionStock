@@ -67,9 +67,9 @@ public class Company {
     public CompanyItem toCompanyItem() {
         CompanyItem item = new CompanyItem();
         item.setSymbol(symbol);
-        item.setExchange(exchange.toString());
-        item.setIndustry(industry.toString());
-        item.setSector(sector.toString());
+//        item.setExchange(exchange.toString());
+//        item.setIndustry(industry.toString());
+//        item.setSector(sector.toString());
         
         return item;
     }

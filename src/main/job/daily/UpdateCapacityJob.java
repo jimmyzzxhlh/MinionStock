@@ -1,4 +1,4 @@
-package main.job;
+package main.job.daily;
 
 import java.time.LocalTime;
 import java.util.concurrent.TimeUnit;
@@ -9,6 +9,10 @@ import org.slf4j.LoggerFactory;
 import dynamodb.DynamoDBCapacity;
 import dynamodb.DynamoDBHelper;
 import dynamodb.Status;
+import main.job.Job;
+import main.job.JobConfig;
+import main.job.JobEnum;
+import main.job.JobUtil;
 import util.CommonUtil;
 
 /**

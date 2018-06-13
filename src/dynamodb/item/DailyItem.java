@@ -16,12 +16,16 @@ public class DailyItem implements DynamoDBItem {
 	private double high;
 	private double low;
 	private long volume;
-	private double vwap;
 	
 	public DailyItem() {}
 	
 	public DailyItem(String symbol) {
 	    this.symbol = symbol;
+	}
+	
+	public DailyItem(String symbol, String date) {
+	    this.symbol = symbol;
+	    this.date = date;
 	}
 	
 	@DynamoDBHashKey(attributeName="S")
@@ -52,13 +56,9 @@ public class DailyItem implements DynamoDBItem {
 	public long getVolume() { return this.volume; }
 	public void setVolume(long volume) { this.volume = volume; }	
 	
-	@DynamoDBAttribute(attributeName="VW")
-	public double getVwap() { return this.vwap; }
-	public void setVwap(double vwap) { this.vwap = vwap; }
-
 	@Override
 	public String toString() {
 	    return String.format("symbol = %s, date = %s, open = %s, close = %s, high = %s, low = %s, volume = %s, vwap = %s",
-	        symbol, date, open, close, high, low, volume, vwap);	            
+	        symbol, date, open, close, high, low, volume);	            
 	}
 }

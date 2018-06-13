@@ -1,71 +1,543 @@
 package test;
 
-import java.lang.reflect.Type;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.TreeMap;
+
+import org.apache.commons.lang.StringUtils;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.Condition;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
 import download.DownloadHelper;
-import download.iex.DailyData;
-import download.iex.DividendData;
+import download.tiingo.TiingoConst;
+import download.tiingo.TiingoDailyData;
+import download.tiingo.TiingoUrlBuilder;
 import dynamodb.DynamoDBProvider;
 import dynamodb.item.DailyItem;
-import util.gson.DoubleTypeAdapter;
+import stock.DailyCandle;
+import stock.IndicatorHelper;
+import util.CommonUtil;
 
 public class Test {
+    private static final DecimalFormat df = new DecimalFormat("#.00");
+    
 	public static void main(String[] args) throws Exception {
 //	    testDynamoDB();
 //	    testIpxApi();
-	    testGson();
+//	    testGson();
+//	    fixData();
+//	    backfillData();
+//	    deleteSymbols();
+//	    checkStockSplitsHaveDecimals();
+//	    checkStockHasConsecutiveDividends();
+//	    testTiiingo();
+//	    crossVerifyStockPrice();
+//	    filterAnalyzedData();	    
+//	    analyzeDividendAgainstTiingo();
+	    testEma();
 	}
 	
-	private static void testDynamoDB() throws Exception {
+	// todo - write test for ema
+	// see here as an example:
+	// http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages
+	private static void testEma() { 
+	    TreeMap<LocalDateTime, DailyCandle> candles = new TreeMap<>();
+	    candles.put(
+	            LocalDateTime.of(LocalDate.of(2010, 03, 24), LocalTime.of(0, 0)),
+	            new DailyCandle().withClose(22.27));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 25), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.19));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 26), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.08));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 29), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.17));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 30), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.18));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 31), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.13));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 1), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.23));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 5), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.43));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 6), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.24));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 7), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.29));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 8), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.15));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 9), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.39));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 12), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.38));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 13), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.61));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 14), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.36));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 15), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(24.05));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 16), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.75));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 19), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.83));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 20), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.95));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 21), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.63));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 22), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.82));
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 23), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.87));
+	    
+        TreeMap<LocalDateTime, Double> outputMap = IndicatorHelper.getExponentialMovingAverage(candles, 10);
+        for (Entry<LocalDateTime, Double> entry : outputMap.entrySet()) {
+            System.out.println(entry.getKey() + " " + entry.getValue());
+        }
+	}
+	
+	private static void deleteSymbols() throws Exception {
+	    Set<String> symbols = getSymbolsFromQuantDL();
+	    for (String symbol : symbols) {
+	        if (symbol.compareTo("AIII") > 0) break;
+	        if (!symbol.matches("[a-zA-Z]*")) {
+	            DynamoDBQueryExpression<DailyItem> queryExpression = new DynamoDBQueryExpression<DailyItem>()
+                    .withHashKeyValues(new DailyItem(symbol));
+                List<DailyItem> items = DynamoDBProvider.getInstance().getMapper().query(DailyItem.class, queryExpression);
+                System.out.println("Deleting " + items.size() + " items for " + symbol + " ...");
+                DynamoDBProvider.getInstance().getMapper().batchDelete(items);                
+	        }
+	    }
+	}
+	
+	private static Set<String> getSymbolsFromQuantDL() { 
+	    Set<String> symbols = new HashSet<>();
+	    File file = new File("data/EOD_20180113.csv");
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] data = CommonUtil.splitCSVLine(line);
+                String symbol = data[0];
+                symbols.add(data[0]);
+                if (symbol.compareTo("AIII") > 0) {
+                    break;
+                }
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return symbols;
+	}
+	
+	private static void deleteData() throws Exception {
+	    Condition condition = new Condition();
 	    DynamoDBQueryExpression<DailyItem> queryExpression = new DynamoDBQueryExpression<DailyItem>()
-	            .withLimit(1)
-	            .withScanIndexForward(false)
-	            .withHashKeyValues(new DailyItem("CAMT"));	            
-	    List<DailyItem> result = DynamoDBProvider.getInstance().getMapper().queryPage(DailyItem.class, queryExpression).getResults();
-	    for (DailyItem item : result) {
-	        System.out.println(item);
-	    }
+            .withKeyConditionExpression("S = :v_symbol AND D <= :v_date")
+            .withExpressionAttributeValues(ImmutableMap.of(
+                ":v_symbol", new AttributeValue().withS("AAME"),
+                ":v_date", new AttributeValue().withS("20121231")));
+	    List<DailyItem> items = DynamoDBProvider.getInstance().getMapper().query(DailyItem.class, queryExpression);
+	    DynamoDBProvider.getInstance().getMapper().batchDelete(items);	    
 	}
 	
-	private static void testIpxApi() throws Exception {
-//	    String url = "https://api.iextrading.com/1.0/stock/thg/chart/2y";
-	    String url = "https://api.iextrading.com/1.0/stock/market/batch?symbols=aapl,fb&types=chart&range=1m";
-//	    BufferedReader br = DownloadHelper.getBufferedReaderFromURL(url);
-//        StringBuilder sb = new StringBuilder();
-//        String line;
-//        while ((line = br.readLine()) != null) {
-//            sb.append(line);
-//        }
-//        br.close();
-	    String str = DownloadHelper.downloadURLToString(url);
+	private static void backfillData() throws Exception {
+	    File file = new File("data/EOD_20180113.csv");
+	    try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            List<DailyItem> items = new ArrayList<>();
+            String line;
+            while ((line = br.readLine()) != null) {
+                DailyItem item = getDailyItem(line);
+                if (item.getSymbol().compareTo("AIMC") < 0) {
+                    continue;
+                }
+                else if (item.getSymbol().equals("AIMC")){
+                    items.add(item);
+                }
+                else {
+                    backfill(items);
+                    break;
+                }                
+            }            
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+	}
+	
+    private static DailyItem getDailyItem(String line) {
+        DailyItem item = new DailyItem();
+        String[] data = CommonUtil.splitCSVLine(line);
+        item.setSymbol(data[0]);
+        item.setDate(CommonUtil.removeHyphen(data[1]));
+        item.setOpen(Double.parseDouble(data[2]));
+        item.setHigh(Double.parseDouble(data[3]));
+        item.setLow(Double.parseDouble(data[4]));
+        item.setClose(Double.parseDouble(data[5]));
+        item.setVolume(Math.round(Double.parseDouble(data[6])));
+        
+        return item;
+    }
+    
+    private static void backfill(List<DailyItem> items) {
+        System.out.println(String.format("Start backfilling %d items ...", items.size()));
+        for (DailyItem item : items) {
+            DynamoDBProvider.getInstance().getMapper().save(item);
+        }
+        System.out.println(String.format("Done backfilling %d items.", items.size()));
+    }
+    
+    private static void checkStockHasConsecutiveDividends() {
+        File inputFile = new File("data/EOD_20180119.csv");
+        File dividendFile = new File("data/duplicated_dividend.csv");
+        File splitFile = new File("data/duplicated_split.csv");
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter bwDividend = new BufferedWriter(new FileWriter(dividendFile));
+            BufferedWriter bwSplit = new BufferedWriter(new FileWriter(splitFile));
+        ) {
+            String line;
+            double lastDividend = 0;
+            double lastSplit = 0;
+            String lastSymbol = "";
+            String lastDate = "";
+            while ((line = br.readLine()) != null) {
+                String[] data = CommonUtil.splitCSVLine(line);
+                String symbol = data[0];
+                String date = data[1];
+                if (!CommonUtil.isSymbolValid(symbol)) continue;
+                
+                DailyItem dailyItem = getDailyItem(line);
+                Double dividend = Double.parseDouble(data[7]);
+                Double split = Double.parseDouble(data[8]);
+                
+                if (lastSymbol.equals(symbol)) {
+                    if (dividend > 0 && lastDividend == dividend) {
+                        bwDividend.write(
+                            StringUtils.join(
+                                Arrays.asList(symbol, lastDate, date, dividend), ","));
+                        bwDividend.newLine();
+                        bwDividend.flush();
+                    }
+                    if (split != 1.0 && lastSplit == split) {
+                        bwSplit.write(
+                            StringUtils.join(
+                                Arrays.asList(symbol, lastDate, date, split), ","));
+                        bwSplit.newLine();
+                        bwSplit.flush();
+                    }
+                }
+                
+                lastSymbol = symbol;
+                lastDividend = dividend;
+                lastSplit = split;
+                lastDate = date;
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static void analyzeDividendAgainstTiingo() throws Exception {
+        File inputFile = new File("data/duplicated_dividend.csv");
+        File outputFile = new File("data/duplicated_dividend_analyzed.csv");
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));            
+        ) {
+            String line;
+            bw.write("Symbol,FirstDate,SecondDate,Dividend,Comment,FirstDividendTiingo,SecondDividendTiingo");
+            bw.newLine();
+            while ((line = br.readLine()) != null) {
+                String[] strs = CommonUtil.splitCSVLine(line);
+                String symbol = strs[0];
+                LocalDate startDate = CommonUtil.parseDate(strs[1]);
+                LocalDate endDate = CommonUtil.parseDate(strs[2]);                
+                String dividendOld = strs[3];
+                if (!CommonUtil.isSymbolValid(symbol)) continue;
+                
+                TreeMap<LocalDate, TiingoDailyData> dataMap = DownloadHelper.downloadTiingoDailyDataMap(symbol, startDate, endDate);
+                
+                if (!dataMap.containsKey(startDate) || !dataMap.containsKey(endDate)) {
+                    // Cannot determine whether the dividend is wrong because Tiingo contains data starting from the end date.
+                    String output = StringUtils.join(Arrays.asList(
+                        symbol,
+                        CommonUtil.formatDate(startDate),
+                        CommonUtil.formatDate(endDate),
+                        dividendOld,
+                        "NA",
+                        "",
+                        ""),
+                            ",");
+                    bw.write(output);
+                    bw.newLine();
+                    System.out.println(output);
+                    continue;
+                }            
+                TiingoDailyData startDateData = dataMap.get(startDate);
+                TiingoDailyData endDateData = dataMap.get(endDate);
+                String output = "";
+                if (endDateData.getDivCash() == 0 && startDateData.getDivCash() > 0) {
+                    output = StringUtils.join(Arrays.asList(
+                        symbol,
+                        CommonUtil.formatDate(startDate),
+                        CommonUtil.formatDate(endDate),
+                        dividendOld,
+                        CommonUtil.formatDate(startDate),
+                        "",
+                        ""),
+                            ",");                                        
+                }
+                else if (endDateData.getDivCash() > 0 && startDateData.getDivCash() == 0) {
+                    output = StringUtils.join(Arrays.asList(
+                        symbol,
+                        CommonUtil.formatDate(startDate),
+                        CommonUtil.formatDate(endDate),
+                        dividendOld,
+                        CommonUtil.formatDate(endDate),
+                        "",
+                        ""),
+                            ",");                    
+                }
+                else if (endDateData.getDivCash() > 0 && endDateData.getDivCash() == startDateData.getDivCash()) {
+                    output = StringUtils.join(Arrays.asList(
+                        symbol,
+                        CommonUtil.formatDate(startDate),
+                        CommonUtil.formatDate(endDate),
+                        dividendOld,
+                        "Duplicatedtoo",
+                        "",
+                        ""),
+                            ",");
+                }
+                else {
+                    output = StringUtils.join(Arrays.asList(
+                        symbol,
+                        CommonUtil.formatDate(startDate),
+                        CommonUtil.formatDate(endDate),
+                        dividendOld,
+                        "Conflict",
+                        startDateData.getDivCash(),
+                        endDateData.getDivCash()),
+                            ",");
+                }
+                bw.write(output);
+                bw.newLine();
+                System.out.println(output);
+            }
+        }
+    }
+    
+    private static void testTiiingo() {
+        String symbol = "AAPL";
+        LocalDate startDate = LocalDate.of(2012, 1, 1);
+        LocalDate endDate = LocalDate.of(2017, 1, 1);
+        String url = new TiingoUrlBuilder()
+            .withSymbol(symbol)
+            .withStartDate(startDate)
+            .withEndDate(endDate)
+            .build();
+
+        String str = DownloadHelper.downloadURLToString(
+            url,
+            ImmutableMap.of("Content-Type", "application/json",
+                            "Authorization", "Token " + TiingoConst.AUTH_TOKEN));
         Gson g = new Gson();
-//        List<DailyData> dataList =
-//                Arrays.asList(g.fromJson(str, DailyData[].class));
-        Type type = new TypeToken<Map<String, Map<String, DailyData[]>>>(){}.getType();
-        Map<String, Map<String, DailyData[]>> dataMap = g.fromJson(str, type);
-        System.out.println(dataMap);
-	}
-	
-	private static void testGson() throws Exception {
-	    String json = "{\"A\":{\"dividends\":[{\"exDate\":\"2017-12-29\",\"paymentDate\":\"2018-01-24\",\"recordDate\":\"2018-01-02\",\"declaredDate\":\"2017-11-15\",\"amount\":0.149,\"flag\":\"FI\",\"type\":\"Dividend income\",\"qualified\":\"\",\"indicated\":\"\"},{\"exDate\":\"2017-10-02\",\"paymentDate\":\"2017-10-25\",\"recordDate\":\"2017-10-03\",\"declaredDate\":\"2017-09-20\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"\",\"indicated\":\"\"},{\"exDate\":\"2017-06-29\",\"paymentDate\":\"2017-07-26\",\"recordDate\":\"2017-07-03\",\"declaredDate\":\"2017-05-17\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2017-03-31\",\"paymentDate\":\"2017-04-26\",\"recordDate\":\"2017-04-04\",\"declaredDate\":\"2017-03-15\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2016-12-29\",\"paymentDate\":\"2017-01-25\",\"recordDate\":\"2017-01-03\",\"declaredDate\":\"2016-11-17\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2016-09-30\",\"paymentDate\":\"2016-10-26\",\"recordDate\":\"2016-10-04\",\"declaredDate\":\"2016-09-21\",\"amount\":0.115,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2016-06-30\",\"paymentDate\":\"2016-07-27\",\"recordDate\":\"2016-07-05\",\"declaredDate\":\"2016-05-18\",\"amount\":0.115,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2016-04-01\",\"paymentDate\":\"2016-04-27\",\"recordDate\":\"2016-04-05\",\"declaredDate\":\"2016-03-16\",\"amount\":0.115,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2015-12-31\",\"paymentDate\":\"2016-01-27\",\"recordDate\":\"2016-01-05\",\"declaredDate\":\"2015-11-19\",\"amount\":0.115,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2015-09-25\",\"paymentDate\":\"2015-10-21\",\"recordDate\":\"2015-09-29\",\"declaredDate\":\"2015-09-16\",\"amount\":0.1,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2015-06-26\",\"paymentDate\":\"2015-07-22\",\"recordDate\":\"2015-06-30\",\"declaredDate\":\"2015-05-20\",\"amount\":0.1,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2015-03-27\",\"paymentDate\":\"2015-04-22\",\"recordDate\":\"2015-03-31\",\"declaredDate\":\"2015-03-18\",\"amount\":0.1,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2015-01-02\",\"paymentDate\":\"2015-01-28\",\"recordDate\":\"2015-01-06\",\"declaredDate\":\"2014-11-20\",\"amount\":0.1,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2014-11-03\",\"paymentDate\":\"\",\"recordDate\":\"\",\"declaredDate\":\"\",\"amount\":15.75,\"flag\":\"\",\"type\":\"Stock dividend\",\"qualified\":\"\",\"indicated\":\"\"},{\"exDate\":\"2014-09-26\",\"paymentDate\":\"2014-10-22\",\"recordDate\":\"2014-09-30\",\"declaredDate\":\"2014-09-17\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2014-06-27\",\"paymentDate\":\"2014-07-23\",\"recordDate\":\"2014-07-01\",\"declaredDate\":\"2014-05-22\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2014-04-09\",\"paymentDate\":\"2014-04-23\",\"recordDate\":\"2014-04-11\",\"declaredDate\":\"2014-04-01\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2013-12-27\",\"paymentDate\":\"2014-01-22\",\"recordDate\":\"2013-12-31\",\"declaredDate\":\"2013-11-22\",\"amount\":0.132,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2013-09-27\",\"paymentDate\":\"2013-10-23\",\"recordDate\":\"2013-10-01\",\"declaredDate\":\"2013-09-18\",\"amount\":0.12,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2013-06-28\",\"paymentDate\":\"2013-07-24\",\"recordDate\":\"2013-07-02\",\"declaredDate\":\"2013-05-23\",\"amount\":0.12,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2013-03-28\",\"paymentDate\":\"2013-04-24\",\"recordDate\":\"2013-04-02\",\"declaredDate\":\"2013-01-17\",\"amount\":0.12,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"}]},\"AA\":{\"dividends\":[{\"exDate\":\"2016-11-08\",\"paymentDate\":\"2016-11-25\",\"recordDate\":\"2016-11-11\",\"declaredDate\":\"2016-09-29\",\"amount\":0.09,\"flag\":\"\",\"type\":\"Dividend income\",\"qualified\":\"Q\",\"indicated\":\"\"},{\"exDate\":\"2016-11-01\",\"paymentDate\":\"2016-11-01\",\"recordDate\":\"2016-10-20\",\"declaredDate\":\"2016-10-13\",\"amount\":\"\",\"flag\":\"\",\"type\":\"Stock dividend\",\"qualified\":\"\",\"indicated\":\"\"}]}}";
-//	    Gson g = new Gson();
-	    Gson g = new GsonBuilder()
-            .registerTypeAdapter(Double.class, new DoubleTypeAdapter())
-            .setLenient().create();
-	    Type type = new TypeToken<Map<String, Map<String, DividendData[]>>>(){}.getType();
-	    Map<String, Map<String, DividendData[]>> dataMap = g.fromJson(json, type);
-	    for (DividendData dividend : dataMap.get("A").get("dividends")) {
-	        System.out.println(dividend);
-	    }
-	    
-	    
-	    
-	}
+        List<TiingoDailyData> dataList =
+            Arrays.asList(g.fromJson(str, TiingoDailyData[].class));
+        for (TiingoDailyData dailyData : dataList) {
+            if (dailyData.getSplitFactor() > 1.0) {
+                System.out.println(dailyData);
+            }            
+        }
+    }
+    
+    /**
+     * Cross verify the stock price between Tiingo and QuanDL
+     */
+    private static void crossVerifyStockPrice() {
+        File inputFile = new File("data/EOD_20180119.csv");
+        File outputFile = new File("data/analyze_20180119.csv");
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+            String line;
+            String lastSymbol = null;
+            TreeMap<String, DailyItem> map = new TreeMap<>();
+            while ((line = br.readLine()) != null) {
+                String[] data = CommonUtil.splitCSVLine(line);
+                String symbol = data[0];
+                if (!CommonUtil.isSymbolValid(symbol)) continue;
+//                if (symbol.compareTo("CAMP") < 0) continue;
+                DailyItem dailyItem = getDailyItem(line);
+                
+                if (lastSymbol == null || lastSymbol.equals(symbol)) {
+                    map.put(dailyItem.getDate(), dailyItem);                    
+                }
+                else {
+                    System.out.println(lastSymbol);
+                    analyzeSymbol(bw, lastSymbol, map);
+                    map = new TreeMap<>();                    
+                }
+                lastSymbol = symbol;                
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * This analyzes the data between Tiingo and QuanDL.
+     * 
+     * If any of the open/close/low/high price has a delta > 0.05 between the two data sets, then
+     * we need to look into it
+     * 
+     * Also Filter out total amount of trading values that are < $100000 per day, which we probably
+     * won't care anyway. 
+     * 
+     * It seems like most of the time the data from QuanDL has a better quality. However there might be
+     * caveats and we need to take closer look.
+     * 
+     * @param bw
+     * @param symbol
+     * @param map
+     * @throws Exception
+     */
+    private static void analyzeSymbol(BufferedWriter bw, String symbol, TreeMap<String, DailyItem> map) throws Exception {
+        if (map.size() == 0) {
+            return;
+        }
+        LocalDate startDate = CommonUtil.parseDate(map.firstKey());
+        LocalDate endDate = CommonUtil.parseDate(map.lastKey());
+        
+        List<TiingoDailyData> dataList = DownloadHelper.downloadTiingoDailyData(symbol, startDate, endDate);
+        
+        for (TiingoDailyData dailyData : dataList) {
+            String date = dailyData.getDate();
+            if (!map.containsKey(date)) {
+                continue;
+            }
+            DailyItem item = map.get(date);
+            if (item.getVolume() * item.getClose() < 1e6) {
+                continue;
+            }
+            if (isDeltaTooLarge(item.getOpen(), dailyData.getOpen()) ||
+                    isDeltaTooLarge(item.getLow(), dailyData.getLow()) ||
+                    isDeltaTooLarge(item.getHigh(), dailyData.getHigh()) ||
+                    isDeltaTooLarge(item.getClose(), dailyData.getClose())) {
+                bw.write(String.format("%s,%s,%s,%s",
+                    symbol,
+                    date,
+                    getDataString(item.getOpen(), item.getHigh(), item.getLow(), item.getClose()),
+                    getDataString(dailyData.getOpen(), dailyData.getHigh(), dailyData.getLow(), dailyData.getClose())));                
+                
+                if (dailyData.getOpen() == dailyData.getClose() &&
+                    dailyData.getHigh() == dailyData.getLow()) {
+                    bw.write(",N");
+                }
+                bw.newLine();
+                bw.flush();
+            }
+        }
+    }
+    
+    private static boolean isDeltaTooLarge(double d1, double d2) {
+        return Math.abs(d1 - d2) / d1 > 0.05;                
+    }
+    
+    private static String getDataString(double open, double high, double low, double close) {
+        StringJoiner sj = new StringJoiner("|");
+        sj.add(Double.toString(open))
+          .add(Double.toString(high))
+          .add(Double.toString(low))
+          .add(Double.toString(close));
+        return sj.toString();
+    }
+    
+    public static void filterAnalyzedData() {
+        File symbolFile = new File("data/supported_tickers.csv");
+        Set<String> symbols = new HashSet<>();
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(symbolFile))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] data = CommonUtil.splitCSVLine(line);
+                String symbol = data[0];
+                if (!CommonUtil.isSymbolValid(symbol)) {
+                    continue;
+                }
+                String exchange = data[1];
+                if (!exchange.equals("NASDAQ") && !exchange.equals("NYSE")) {
+                    continue;
+                }
+                String assetType = data[2];
+                if (!assetType.equals("Stock")) {
+                    continue;
+                }
+                symbols.add(symbol);
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        File inputFile = new File("data/analyze_20180119.csv");
+        File outputFile = new File("data/analyze_20180119_filtered.csv");
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String data[] = CommonUtil.splitCSVLine(line);
+                String symbol = data[0];
+                if (!symbols.contains(symbol)) {
+                    continue;
+                }
+                bw.write(line);
+                bw.newLine();                
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();            
+        }
+    }
 }

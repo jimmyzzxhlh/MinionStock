@@ -3,7 +3,7 @@ package download.iex;
 import dynamodb.item.DailyItem;
 import util.CommonUtil;
 
-public class DailyData {
+public class IexDailyData {
 	private String date;
 	private double open;
 	private double close;
@@ -72,8 +72,7 @@ public class DailyData {
         item.setClose(close);
         item.setHigh(high > 0 ? high : close);
         item.setLow(low > 0 ? low : close);
-        item.setVwap(vwap > 0 ? vwap : close);
-        item.setVolume(volume);        
+        item.setVolume(volume);       
         
         return item;
     }

@@ -7,46 +7,60 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.gson.Gson;
+
 import company.Company;
-import company.CompanyEnum.Exchange;
+import download.tiingo.TiingoConst;
+import download.tiingo.TiingoDailyData;
+import download.tiingo.TiingoUrlBuilder;
 import util.CommonUtil;
 
 public class DownloadHelper {
 
     private static final Logger log = LoggerFactory.getLogger(DownloadHelper.class);
+    private static final String TICKER_LIST_URL = "http://static.quandl.com/end_of_day_us_stocks/ticker_list.csv";
 
     public static Map<String, Company> downloadCompanies() throws IOException {
         Map<String, Company> map = new TreeMap<>();
 
-        for (Exchange exchange : Exchange.values()) {
-            String url = getCompaniesURL(exchange);
-            log.info("Downloading companies from URL: " + url);
-            try (BufferedReader br = getBufferedReaderFromURL(url)) {
-                br.readLine(); // Skip the first title line
-                String line;
-                while ((line = br.readLine()) != null) {
-                    String[] data = CommonUtil.splitCSVLine(line);
-                    String symbol = data[0];
-                    // Only consider stocks that are pure alphabets 
-                    if (symbol.length() == 0 || !symbol.matches("[a-zA-Z]*")) {
-                        continue;
-                    }
-                    Company company = new Company().withExchange(exchange).withSymbol(symbol).withSector(data[5])
-                            .withIndustry(data[6]);
-                    map.put(symbol, company);
+        log.info("Downloading companies from URL: " + TICKER_LIST_URL);
+        try (BufferedReader br = getBufferedReaderFromURL(TICKER_LIST_URL)) {
+            br.readLine(); // Skip the first title line
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] data = CommonUtil.splitCSVLine(line);
+                String symbol = data[0];
+                // Only consider stocks that are pure alphabets 
+                if (symbol.length() == 0 || !symbol.matches("[a-zA-Z]*")) {
+                    continue;
                 }
-            } catch (IOException e) {
-                log.error("Unable to download companies from URL: " + url);
-                throw e;
+                // TODO - Get industry and sector information from IEX.
+                Company company = new Company().withSymbol(symbol);
+                map.put(symbol, company);
             }
+        } catch (IOException e) {
+            log.error("Unable to download companies from URL: " + TICKER_LIST_URL);
+            throw e;
         }
-
+    
         log.info(map.size() + " companies have been downloaded.");
         return map;
     }
@@ -96,9 +110,77 @@ public class DownloadHelper {
         URL url = getURL(urlString);
         return new BufferedReader(new InputStreamReader(url.openStream()));        
     }
-
-    private static String getCompaniesURL(Exchange exchange) {
-        return "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange="
-                + exchange.name().toLowerCase();
+    
+    public static String downloadURLToString(String urlString, Map<String, String> headers) {
+        log.info("Downloading URL " + urlString + " to string ...");
+        HttpClient client = HttpClientBuilder.create().build();
+        HttpGet request = new HttpGet(urlString);
+        
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            request.addHeader(header.getKey(), header.getValue());
+        }
+        
+        HttpResponse response = null;
+        try {
+            response = client.execute(request);
+        } catch (Exception e) {
+            log.error(String.format("Failed to download from URL %s to string: ", urlString), e);
+            return "";
+        }
+        
+        if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+            log.error(String.format("Failed to download from URL %s to string. Code: %s, Reason: %s",
+                urlString, response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase()));
+            return "";
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        char[] buffer = new char[64000];
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))) {
+            int len = 0;
+            while ((len = br.read(buffer)) > 0) {
+                sb.append(buffer, 0, len);
+            }
+        } catch (Exception e) {
+            log.error("Failed to download from URL " + urlString + " to string: ", e);            
+        }
+        return sb.toString();
     }
+    
+    public static List<TiingoDailyData> downloadTiingoDailyData(String symbol, LocalDate startDate, LocalDate endDate) {
+        String url = new TiingoUrlBuilder()
+            .withSymbol(symbol)
+            .withStartDate(startDate)
+            .withEndDate(endDate)
+            .build();
+    
+        String str = DownloadHelper.downloadURLToString(
+            url,
+            ImmutableMap.of("Content-Type", "application/json",
+                            "Authorization", "Token " + TiingoConst.AUTH_TOKEN));
+        Gson g = new Gson();
+        
+        TiingoDailyData[] dataArray = g.fromJson(str, TiingoDailyData[].class);
+        if (dataArray == null || dataArray.length == 0) {
+            return ImmutableList.of();
+        }
+        
+        return Arrays.asList(dataArray);
+    }
+    
+    public static TreeMap<LocalDate, TiingoDailyData> downloadTiingoDailyDataMap(String symbol, LocalDate startDate, LocalDate endDate) {
+        List<TiingoDailyData> dataList = downloadTiingoDailyData(symbol, startDate, endDate);
+        
+        TreeMap<LocalDate, TiingoDailyData> map = new TreeMap<>();
+        for (TiingoDailyData data : dataList) {
+            map.put(data.getLocalDate(), data);
+        }
+        
+        return map;        
+    }
+    
+//    private static String getCompaniesURL() {
+//        return "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&render=download&exchange="
+//                + exchange.name().toLowerCase();
+//    }
 }

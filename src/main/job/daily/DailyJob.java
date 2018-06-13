@@ -1,4 +1,4 @@
-package main.job;
+package main.job.daily;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,6 +6,11 @@ import org.slf4j.LoggerFactory;
 import dynamodb.DynamoDBHelper;
 import dynamodb.Status;
 import exceptions.JobException;
+import main.job.Job;
+import main.job.JobConfig;
+import main.job.JobEnum;
+import main.job.JobStatusEnum;
+import main.job.JobUtil;
 import util.CommonUtil;
 
 public abstract class DailyJob implements Job {

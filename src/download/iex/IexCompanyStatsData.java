@@ -7,7 +7,7 @@ import com.google.gson.annotations.SerializedName;
 import dynamodb.item.CompanyStatsItem;
 import util.CommonUtil;
 
-public class CompanyStatsData {
+public class IexCompanyStatsData {
     private long shortInterest;
     private double shortRatio;
     private double dividendRate;

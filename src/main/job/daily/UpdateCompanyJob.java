@@ -1,4 +1,4 @@
-package main.job;
+package main.job.daily;
 
 import java.util.Map;
 
@@ -11,6 +11,7 @@ import dynamodb.DynamoDBHelper;
 import dynamodb.DynamoDBProvider;
 import dynamodb.item.CompanyItem;
 import exceptions.JobException;
+import main.job.JobEnum;
 
 public class UpdateCompanyJob extends DailyJob {
     private static final Logger log = LoggerFactory.getLogger(UpdateCompanyJob.class);

@@ -32,8 +32,8 @@ public class JobUtil {
             JobEnum.UPDATE_DAILY_CHART,
                 new JobConfig()
                     .withTableName(DynamoDBConst.TABLE_DAILY)                    
-                    .withStartTime(LocalTime.of(19, 0))
-                    .withWorkCapacity(new DynamoDBCapacity(30, 30))
+                    .withStartTime(LocalTime.of(20, 0))
+                    .withWorkCapacity(new DynamoDBCapacity(30, 100))
                     .withIdleCapacity(new DynamoDBCapacity(5, 1))
                     .withJobTarget("Daily Chart"),
             JobEnum.UPDATE_DIVIDEND,

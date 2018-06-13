@@ -1,6 +1,6 @@
 package stock;
 
-import org.joda.time.DateTime;
+import java.time.LocalDateTime;
 
 import enums.StockEnum.CandleDataType;
 
@@ -9,36 +9,29 @@ import enums.StockEnum.CandleDataType;
  * @author jimmyzzxhlh-Dell
  *
  */
-public abstract class AbstractCandle<T extends AbstractCandle<T>> {
+public abstract class AbstractCandle {
+    protected LocalDateTime dt;
     protected double open;
     protected double close;
     protected double high;
     protected double low;
     protected long volume;
-    protected DateTime dateTime;  //The instant will be assumed to be UTC time. This is intentional so that it is easier and consistent to implement.
         
-    protected AbstractCandle() {
-    	
-    }
+    protected AbstractCandle() {}
     
-    public DateTime getDateTime()   { return dateTime; }
+    public LocalDateTime getDateTime() { return dt; }
     public double getOpen()         { return open;    }
     public double getClose()        { return close;   }
     public double getHigh()         { return high;    }
     public double getLow()          { return low;     }
     public long getVolume()         { return volume;  }
     
-    public T withDateTime(DateTime dateTime) { this.dateTime = dateTime; return (T) this; }
-    public T withOpen(double open)           { this.open = open; return (T) this; }
-    public T withClose(double close)         { this.close = close; return (T) this; }
-    public T withHigh(double high)           { this.high = high; return (T) this; }
-    public T withLow(double low)             { this.low = low; return (T) this; }
-    public T withVolume(long volume)         { this.volume = volume; return (T) this; }
-    
-    /**
-     * Child class should implement a deep copy function.
-     */
-    public abstract T copy();
+    public <T extends AbstractCandle> T withDateTime(LocalDateTime dt)  { this.dt = dt; return (T) this; }
+    public <T extends AbstractCandle> T withOpen(double open)           { this.open = open; return (T) this; }
+    public <T extends AbstractCandle> T withClose(double close)         { this.close = close; return (T) this; }
+    public <T extends AbstractCandle> T withHigh(double high)           { this.high = high; return (T) this; }
+    public <T extends AbstractCandle> T withLow(double low)             { this.low = low; return (T) this; }
+    public <T extends AbstractCandle> T withVolume(long volume)         { this.volume = volume; return (T) this; }        
     
     /**
      * Get the specific price (open, close, high, low)
@@ -101,7 +94,7 @@ public abstract class AbstractCandle<T extends AbstractCandle<T>> {
     
     @Override
     public String toString() {
-        return String.format("dateTime=%s, open=%d, close=%d, low=%d, high=%d, volume=%d",
-                               dateTime, open, close, low, high, volume);
+        return String.format("open=%d, close=%d, low=%d, high=%d, volume=%d",
+                               open, close, low, high, volume);
     }
 }

@@ -1,4 +1,4 @@
-package main.job;
+package main.job.daily;
 //package dynamodb;
 //
 //import java.util.Arrays;

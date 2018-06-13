@@ -32,10 +32,10 @@ public class CompanyItem implements DynamoDBItem {
     
     public Company toCompany() {
         Company company = new Company()
-            .withSymbol(symbol)
-            .withExchange(exchange)
-            .withIndustry(industry)
-            .withSector(sector);
+            .withSymbol(symbol);
+//            .withExchange(exchange)
+//            .withIndustry(industry)
+//            .withSector(sector);
         
         return company;
     }    

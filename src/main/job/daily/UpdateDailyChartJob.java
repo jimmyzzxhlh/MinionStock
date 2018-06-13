@@ -1,11 +1,10 @@
-package main.job;
+package main.job.daily;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,19 +14,20 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import download.DownloadHelper;
-import download.iex.DailyData;
+import download.iex.IexDailyData;
 import download.iex.IexConst;
 import download.iex.IexUrlBuilder;
-import dynamodb.DynamoDBHelper;
 import dynamodb.DynamoDBProvider;
 import dynamodb.item.DailyItem;
 import exceptions.JobException;
+import main.job.JobEnum;
+import util.CommonUtil;
 
 public class UpdateDailyChartJob extends DailyJob {    
     private static final Logger log = LoggerFactory.getLogger(UpdateDailyChartJob.class);
     
     private final Gson g = new GsonBuilder().setLenient().create();
-    private final Type type = new TypeToken<Map<String, Map<String, DailyData[]>>>(){}.getType();
+    private final Type type = new TypeToken<Map<String, Map<String, IexDailyData[]>>>(){}.getType();
     
     public UpdateDailyChartJob() {
         super(JobEnum.UPDATE_DAILY_CHART);         
@@ -38,7 +38,7 @@ public class UpdateDailyChartJob extends DailyJob {
         try {            
             List<String> symbols = new ArrayList<>(); 
     
-            for (String symbol : DownloadHelper.downloadCompanies().keySet()) {
+            for (String symbol : DownloadHelper.downloadCompanies().keySet()) {                
                 symbols.add(symbol);
                 if (symbols.size() == IexConst.MAX_BATCH_SYMBOLS) {
                     batchUpdateDailyChart(symbols);
@@ -72,36 +72,27 @@ public class UpdateDailyChartJob extends DailyJob {
             return;
         }
     
-        Map<String, Map<String, DailyData[]>> dataMap = g.fromJson(str, type);        
+        Map<String, Map<String, IexDailyData[]>> dataMap = g.fromJson(str, type);        
         for (String symbol : symbols) {
-            log.info("Checking the last updated daily chart downloaded for " + symbol + " ...");
-            DailyItem lastItem = DynamoDBHelper.getInstance().getLastItem(new DailyItem(symbol), DailyItem.class);
-            List<DailyData> dataList = Arrays.asList(dataMap.get(symbol).get("chart"));
-            if (lastItem == null) {
-                log.info("Cannot find last updated item for " + symbol + ". Is this a new symbol?");
-                if (dataList.size() == 0) {
-                    log.info(String.format("No data is found for %s. Skipping ...", symbol));
-                    continue;
-                }
+            if (!dataMap.containsKey(symbol)) {
+                log.warn(String.format("%s does not seem to be a valid symbol. No data is downloaded. Skipped.", symbol));
+                continue;
             }
-            else {
-                log.info("Last updated date is " + lastItem.getDate() + ".");
-                dataList = dataList.stream()
-                    .filter(data -> data.getDate().compareTo(lastItem.getDate()) > 0)
-                    .collect(Collectors.toList());
-                if (dataList.size() == 0) {    
-                    log.info(String.format("No data after %s is found for %s. Skipping ...",
-                        lastItem.getDate(), symbol));
+            try {                
+                List<IexDailyData> dataList = Arrays.asList(dataMap.get(symbol).get("chart"));
+                IexDailyData data = dataList.get(dataList.size() - 1);
+                if (!data.getDate().equals(CommonUtil.getPacificDateNow())) {
+                    log.warn("The data is not today's data! Skipped and not saved: " + data);
                     continue;
-                }
-            }            
-            
-            log.info(String.format("Start saving %d items for %s ...", dataList.size(), symbol));
-            for (DailyData data : dataList) {
+                }                
+                log.info(String.format("Start saving item for %s on %s ...", symbol, data.getDate()));
                 DailyItem item = data.toDailyItem(symbol);                
                 DynamoDBProvider.getInstance().getMapper().save(item);
-            }            
-            log.info(String.format("Done saving %d items for %s.", dataList.size(), symbol));            
-        }
+                log.info(String.format("Done saving item for %s on %s.", symbol, data.getDate()));
+            }
+            catch (Exception e) {
+                log.error("Failed to update daily chart for " + symbol + ": ", e);
+            }
+        }        
     }
 }

@@ -1,22 +1,16 @@
 package util;
 
 import java.time.DayOfWeek;
-import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang.StringUtils;
 
 import de.jollyday.HolidayCalendar;
 import de.jollyday.HolidayManager;
@@ -95,6 +89,10 @@ public class CommonUtil {
 	    return ZonedDateTime.now(PACIFIC_ZONE_ID);
 	}
 	
+	public static String getPacificDateNow() {
+	    return formatDate(getPacificTimeNow().toLocalDate());
+	}
+	
 	public static <T> void requireNonNull(T obj, String objName) {
 	    Objects.requireNonNull(obj, objName + " cannot be null.");
 	}
@@ -117,4 +115,10 @@ public class CommonUtil {
 	        .toString();	    
 	    throw new IllegalArgumentException(message);
 	}
+	
+	public static boolean isSymbolValid(String symbol) {
+	    if (StringUtils.isEmpty(symbol)) return false;
+	    return symbol.matches("[a-zA-Z]*");
+	}
+    
 }

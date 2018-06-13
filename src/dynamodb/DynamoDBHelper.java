@@ -6,9 +6,11 @@ import java.util.Map;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.UpdateTableRequest;
+import com.google.common.collect.ImmutableMap;
 
 import company.Company;
 import dynamodb.item.CompanyItem;
@@ -47,17 +49,38 @@ public class DynamoDBHelper {
      * @param itemWithHashKey An item with the hash key set only (e.g. symbol)
      */
     public <T> T getLastItem(T itemWithHashKey, Class<T> clazz) {
+        return getFirstOrLastItem(itemWithHashKey, clazz, false);
+    }
+    
+    public <T> T getFirstItem(T itemWithHashKey, Class<T> clazz) {
+        return getFirstOrLastItem(itemWithHashKey, clazz, true);
+    }
+    
+    private <T> T getFirstOrLastItem(T itemWithHashKey, Class<T> clazz, boolean isFirst) {
         DynamoDBQueryExpression<T> queryExpression = new DynamoDBQueryExpression<T>()
             .withLimit(1)
-            .withScanIndexForward(false)
-            .withHashKeyValues(itemWithHashKey);              
-        List<T> result =
+            .withScanIndexForward(isFirst)
+            .withHashKeyValues(itemWithHashKey);            
+        List<T> results =
             DynamoDBProvider.getInstance().getMapper()
                 .queryPage(clazz, queryExpression).getResults();
-        if (result.size() == 0) {   
+        if (results.size() == 0) {   
             return null;
         }
-        return result.get(0);
+        return results.get(0);        
+    }
+    
+    public <T> T getItem(T itemWithKeys) {
+        return DynamoDBProvider.getInstance().getMapper().load(itemWithKeys);
+    }
+    
+    public <T> List<T> getItems(T itemWithHashKey, Class<T> clazz) {
+        DynamoDBQueryExpression<T> queryExpression = new DynamoDBQueryExpression<T>()
+            .withHashKeyValues(itemWithHashKey);            
+        List<T> results =
+            DynamoDBProvider.getInstance().getMapper()
+                .queryPage(clazz, queryExpression).getResults();
+        return results;
     }
     
     /** Any DynamoDB specific helpers go below from here */    
