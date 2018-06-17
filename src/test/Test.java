@@ -33,7 +33,7 @@ import download.tiingo.TiingoUrlBuilder;
 import dynamodb.DynamoDBProvider;
 import dynamodb.item.DailyItem;
 import stock.DailyCandle;
-import stock.IndicatorHelper;
+import stock.Calculator;
 import util.CommonUtil;
 
 public class Test {
@@ -53,9 +53,9 @@ public class Test {
 //	    filterAnalyzedData();	    
 //	    analyzeDividendAgainstTiingo();
 	    testEma();
+	    
 	}
 	
-	// todo - write test for ema
 	// see here as an example:
 	// http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages
 	private static void testEma() { 
@@ -127,7 +127,7 @@ public class Test {
                 LocalDateTime.of(LocalDate.of(2010, 4, 23), LocalTime.of(0, 0)),
                 new DailyCandle().withClose(23.87));
 	    
-        TreeMap<LocalDateTime, Double> outputMap = IndicatorHelper.getExponentialMovingAverage(candles, 10);
+        TreeMap<LocalDateTime, Double> outputMap = Calculator.getExponentialMovingAverage(candles, 10);
         for (Entry<LocalDateTime, Double> entry : outputMap.entrySet()) {
             System.out.println(entry.getKey() + " " + entry.getValue());
         }

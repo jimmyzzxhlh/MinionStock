@@ -2,6 +2,7 @@ package util;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -62,6 +63,10 @@ public class CommonUtil {
 	
 	public static ZonedDateTime parseDateTime(String dateTimeString) {
 	    return ZonedDateTime.parse(dateTimeString, dateTimeFormatter);
+	}
+	
+	public static LocalDateTime getDateTime(LocalDate date) {
+	    return LocalDateTime.of(date, LocalTime.of(0, 0));
 	}
 	
 	/**

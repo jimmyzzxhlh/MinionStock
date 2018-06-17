@@ -1,20 +1,42 @@
 package stock;
 
+import java.sql.Date;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.IsoFields;
+import java.time.temporal.WeekFields;
+import java.util.Locale;
 import java.util.TreeMap;
+
+import org.mockito.cglib.core.Local;
+
+import software.amazon.ion.impl.PrivateIonSystem;
 
 public class WeeklyCandle extends AbstractCandle {
     private TreeMap<LocalDateTime, DailyCandle> dailyCandles;
     
     // See http://joda-time.sourceforge.net/field.html
+    private LocalDate startDate;
     private int week;  // Week of week based year
     private int year;  // Week based year
     
-    public WeeklyCandle(int year, int week) {
-        this.year = year;
-        this.week = week;
+    public WeeklyCandle(LocalDate startDate) {
+        this.startDate = startDate;
+        this.year = startDate.get(IsoFields.WEEK_BASED_YEAR);
+        this.week = startDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
         this.dailyCandles = new TreeMap<>();
+    }
+    
+    public int getYear() {
+        return year;
+    }
+    
+    public int getWeek() {
+        return week;
+    }
+    
+    public LocalDate getStartDate() {
+        return startDate;
     }
     
     public void addDailyCandle(DailyCandle candle) {

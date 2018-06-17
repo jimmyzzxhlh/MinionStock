@@ -5,11 +5,21 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.IsoFields;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import javax.lang.model.type.PrimitiveType;
+
+import java.util.Queue;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -19,9 +29,13 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
+import enums.StockEnum.CandleDataType;
 import stock.DailyCandle;
 import stock.Dividend;
+import stock.ProfitAndLoss;
+import stock.Calculator;
 import stock.Split;
+import stock.WeeklyCandle;
 import util.CommonUtil;
 
 public class Sanitize {
@@ -29,7 +43,60 @@ public class Sanitize {
 //        splitAdjustedData();
 //        writeAdjustedPriceFile();
 //        findStockWithBothSplitAndDividend();
-        writeFeatures();
+        filterStock();
+//        writeFeatures();
+    }
+    
+    /**
+     * Filter stock that:
+     * - Does not have a valid symbol
+     * - Has an average daily volume * close price < 1 million
+     * @throws Exception
+     */
+    private static void filterStock() throws Exception {
+        File inputFile = new File("data/EOD_20180119_adjusted.csv");
+        File outputFile = new File("data/EOD_20180119_adjusted_filtered.csv");
+        
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
+        ) {
+            String line;
+            String lastSymbol = "";
+            int count = 0;
+            double turnover = 0;
+            StringBuilder sb = new StringBuilder();            
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                String symbol = data[0];
+                
+                if (!CommonUtil.isSymbolValid(symbol)) {
+                    continue;
+                }
+                
+                if (lastSymbol.length() > 0 && !lastSymbol.equals(symbol)) {
+                    System.out.print(symbol);                    
+                    if (turnover / count > 1e6) {
+                        bw.write(sb.toString());                        
+                    }
+                    else {
+                        System.out.print(" does not have enough average turnover: " + turnover / count);
+                    }
+                    System.out.println();
+                    count = 0;
+                    turnover = 0;
+                    sb = new StringBuilder();                    
+                }
+                
+                lastSymbol = symbol;
+                double close = Double.valueOf(data[5]);
+                long volume = Long.valueOf(data[6]);
+                count++;
+                turnover += close * volume;
+                sb.append(line);                
+                sb.append(System.lineSeparator());                
+            }
+        }
     }
     
     /**
@@ -49,8 +116,160 @@ public class Sanitize {
     private static void writeFeatures() throws Exception {
         File inputFile = new File("data/EOD_20180119_adjusted.csv");
         File outputFile = new File("data/EOD_20180119_features.csv");
+        File errorFile = new File("data/EOD_20180119_weekskipped.csv");
         
+        TreeMap<LocalDateTime, WeeklyCandle> weeklyCandles = new TreeMap<>();
+        WeeklyCandle weeklyCandle = null;
         
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
+            BufferedWriter bwError = new BufferedWriter(new FileWriter(errorFile));
+        ) {
+            //todo - calculate target labels profit and volume
+            bw.write(
+                // The price here is the relevant price movement in percentage against the last week's close price.
+                "Symbol,Date,Open,High,Low,Close," +
+                // How far is the current close price from the EMA
+                "Dist4,Dist12,Dist26,Dist52," +
+                // Slope for the EMA line
+                "Slope4,Slope12,Slope26,Slope52," +
+                // Current volume / previous X weeks average volume (excluding current week)
+                "volume4,volume12,volume26,volume52," +
+                // Maximum profit in the next X weeks (i.e. compare to high price)
+                "Profit4,Profit12,Profit26," +
+                // Maximum loss in the next X weeks (i.e. compare to low price)
+                "Loss4,Loss12,Loss26");
+            bw.newLine();
+            String line;
+            String lastSymbol = "";
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+                String[] data = line.split(",");
+                String symbol = data[0];
+                
+                if (!CommonUtil.isSymbolValid(symbol)) {
+                    continue;
+                }
+                
+                if (lastSymbol.length() > 0 && !lastSymbol.equals(symbol)) {
+                    writeWeeklyEmaToFile(lastSymbol, weeklyCandles, bw);
+                    weeklyCandles = new TreeMap<>();
+                    break;
+                }
+                
+                lastSymbol = symbol;
+                LocalDate date = CommonUtil.parseDate(data[1]);
+                double open = Double.valueOf(data[2]);
+                double high = Double.valueOf(data[3]);
+                double low = Double.valueOf(data[4]);
+                double close = Double.valueOf(data[5]);
+                long volume = Long.valueOf(data[6]);
+                
+                DailyCandle candle = new DailyCandle()                        
+                        .withDate(date)
+                        .withOpen(open)
+                        .withHigh(high)
+                        .withLow(low)
+                        .withClose(close)
+                        .withVolume(volume);
+                
+                // The very first candle in the whole file.                
+                if (weeklyCandle == null) {                    
+                    weeklyCandle = new WeeklyCandle(date);                    
+                }
+                else {
+                    // Check if the week is changed. If yes, make sure we are not skipping any weeks.
+                    int currentWeek = weeklyCandle.getWeek();
+                    int currentYear = weeklyCandle.getYear();
+                    int week = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+                    int year = date.get(IsoFields.WEEK_BASED_YEAR);
+                    if (week != currentWeek) {     
+                        if (week != currentWeek + 1 && !(week == 1 && year == currentYear + 1)) {
+                            bwError.write(String.format("%s,%d,%d,%d,%d", symbol, currentWeek, currentYear, week, year));
+                            bwError.newLine();
+                        }
+                        // Add the weekly candle to map and create a new weekly candle because the week is changed.
+                        weeklyCandles.put(CommonUtil.getDateTime(weeklyCandle.getStartDate()), weeklyCandle);
+                        weeklyCandle = new WeeklyCandle(date);
+                        weeklyCandle.addDailyCandle(candle);
+                    }
+                    else if (currentYear == year) {
+                        weeklyCandle.addDailyCandle(candle);    
+                    }
+                    else {
+                        bwError.write(String.format("%s,%d,%d,%d,%d", symbol, currentWeek, currentYear, week, year));
+                        bwError.newLine();
+                    }
+                }                
+            }
+            writeWeeklyEmaToFile(lastSymbol, weeklyCandles, bw);
+        }   
+    }
+    
+    public static void writeWeeklyEmaToFile(
+        String symbol, TreeMap<LocalDateTime, WeeklyCandle> weeklyCandles, BufferedWriter bw) throws Exception {
+
+        TreeMap<LocalDateTime, Double> openDist = Calculator.getPriceDist(weeklyCandles, CandleDataType.OPEN);
+        TreeMap<LocalDateTime, Double> highDist = Calculator.getPriceDist(weeklyCandles, CandleDataType.HIGH);
+        TreeMap<LocalDateTime, Double> lowDist = Calculator.getPriceDist(weeklyCandles, CandleDataType.LOW);
+        TreeMap<LocalDateTime, Double> closeDist = Calculator.getPriceDist(weeklyCandles, CandleDataType.CLOSE);
+                
+        TreeMap<LocalDateTime, Double> emaFourWeeks = Calculator.getExponentialMovingAverage(weeklyCandles, 4);
+        TreeMap<LocalDateTime, Double> emaTwelveWeeks = Calculator.getExponentialMovingAverage(weeklyCandles, 12);
+        TreeMap<LocalDateTime, Double> emaTwentySixWeeks = Calculator.getExponentialMovingAverage(weeklyCandles, 26);
+        TreeMap<LocalDateTime, Double> emaFiftyTwoWeeks = Calculator.getExponentialMovingAverage(weeklyCandles, 52);
+        
+        TreeMap<LocalDateTime, Double> emaDistFourWeeks = Calculator.getEmaDistance(weeklyCandles, emaFourWeeks);
+        TreeMap<LocalDateTime, Double> emaDistTwelveWeeks = Calculator.getEmaDistance(weeklyCandles, emaTwelveWeeks);
+        TreeMap<LocalDateTime, Double> emaDistTwentySixWeeks = Calculator.getEmaDistance(weeklyCandles, emaTwentySixWeeks);
+        TreeMap<LocalDateTime, Double> emaDistFiftyTwoWeeks = Calculator.getEmaDistance(weeklyCandles, emaFiftyTwoWeeks);
+        
+        TreeMap<LocalDateTime, Double> emaSlopeFourWeeks = Calculator.getEmaSlope(emaFourWeeks);
+        TreeMap<LocalDateTime, Double> emaSlopeTwelveWeeks = Calculator.getEmaSlope(emaDistTwelveWeeks);
+        TreeMap<LocalDateTime, Double> emaSlopeTwentySixWeeks = Calculator.getEmaSlope(emaDistTwentySixWeeks);
+        TreeMap<LocalDateTime, Double> emaSlopeFiftyTwoWeeks = Calculator.getEmaSlope(emaDistFiftyTwoWeeks);
+        
+        TreeMap<LocalDateTime, Double> volumeFourWeeks = Calculator.getRelativeVolume(weeklyCandles, 4);
+        TreeMap<LocalDateTime, Double> volumeTwelveWeeks = Calculator.getRelativeVolume(weeklyCandles, 12);
+        TreeMap<LocalDateTime, Double> volumeTwentySixWeeks = Calculator.getRelativeVolume(weeklyCandles, 26);
+        TreeMap<LocalDateTime, Double> volumeFiftyTwoWeeks = Calculator.getRelativeVolume(weeklyCandles, 52);
+        
+        TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossFourWeeks = Calculator.getProfitAndLoss(weeklyCandles, 4);
+        TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossTwelveWeeks = Calculator.getProfitAndLoss(weeklyCandles, 12);
+        TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossTwentySixWeeks = Calculator.getProfitAndLoss(weeklyCandles, 26);
+        
+        // Loop from the map that has the least data (needs 53 candles)
+        for (Entry<LocalDateTime, Double> entry : emaSlopeFiftyTwoWeeks.entrySet()) {
+            LocalDateTime dateTime = entry.getKey();
+            bw.write(StringUtils.join(Arrays.asList(
+                symbol,
+                CommonUtil.formatDate(dateTime.toLocalDate()),
+                openDist.get(dateTime),
+                highDist.get(dateTime),
+                lowDist.get(dateTime),
+                closeDist.get(dateTime),
+                emaDistFourWeeks.get(dateTime),
+                emaDistTwelveWeeks.get(dateTime),
+                emaDistTwentySixWeeks.get(dateTime),
+                emaDistFiftyTwoWeeks.get(dateTime),
+                emaSlopeFourWeeks.get(dateTime),
+                emaSlopeTwelveWeeks.get(dateTime),
+                emaSlopeTwentySixWeeks.get(dateTime),
+                emaSlopeFiftyTwoWeeks.get(dateTime),
+                volumeFourWeeks.get(dateTime),
+                volumeTwelveWeeks.get(dateTime),
+                volumeTwentySixWeeks.get(dateTime),
+                volumeFiftyTwoWeeks.get(dateTime),
+                profitAndLossFourWeeks.get(dateTime).getProfit(),
+                profitAndLossTwelveWeeks.get(dateTime).getProfit(),
+                profitAndLossTwentySixWeeks.get(dateTime).getProfit(),
+                profitAndLossFourWeeks.get(dateTime).getLoss(),
+                profitAndLossTwelveWeeks.get(dateTime).getLoss(),
+                profitAndLossTwentySixWeeks.get(dateTime).getLoss()                
+            ), ","));
+            bw.newLine();
+        }
     }
     
     private static void findStockWithBothSplitAndDividend() throws Exception {
