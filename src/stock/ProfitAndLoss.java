@@ -1,5 +1,7 @@
 package stock;
 
+import javax.print.DocFlavor.STRING;
+
 public class ProfitAndLoss {
     private double profit;
     private double loss;
@@ -23,5 +25,10 @@ public class ProfitAndLoss {
 
     public void setLoss(double loss) {
         this.loss = loss;
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("profit=%f, loss=%f", profit, loss);
     }
 }

@@ -14,6 +14,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+
+import javax.swing.plaf.metal.MetalIconFactory.FolderIcon16;
+
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeMap;
@@ -32,7 +35,9 @@ import download.tiingo.TiingoDailyData;
 import download.tiingo.TiingoUrlBuilder;
 import dynamodb.DynamoDBProvider;
 import dynamodb.item.DailyItem;
+import enums.StockEnum.CandleDataType;
 import stock.DailyCandle;
+import stock.ProfitAndLoss;
 import stock.Calculator;
 import util.CommonUtil;
 
@@ -52,85 +57,200 @@ public class Test {
 //	    crossVerifyStockPrice();
 //	    filterAnalyzedData();	    
 //	    analyzeDividendAgainstTiingo();
-	    testEma();
+//	    testEma();
+//	    testGetPriceDistance();
+//	    testGetEmaDistance();
+//	    testGetRelativeVolume();
+//	    testGetEmaSlope();
+	    testGetProfitAndLoss();
+	}
+	
+	private static void testGetProfitAndLoss() {
+	    TreeMap<LocalDateTime, DailyCandle> candles = createTestDailyCandlesWithAllPrices();        
+	    TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossMap = Calculator.getProfitAndLoss(candles, 2);
 	    
+	    for (Entry<LocalDateTime, ProfitAndLoss> entry : profitAndLossMap.entrySet()) {
+            System.out.println(entry);
+        }
+	}
+	
+	private static void testGetRelativeVolume() {
+	    TreeMap<LocalDateTime, DailyCandle> candles = createTestDailyCandlesWithVolume();
+	    TreeMap<LocalDateTime, Double> relativeVolumeMap = Calculator.getRelativeVolume(candles, 4);
+	    for (Entry<LocalDateTime, Double> entry : relativeVolumeMap.entrySet()) {
+	        System.out.println(entry);
+	    }
+	}
+	
+	private static void testGetEmaDistance() {
+	    TreeMap<LocalDateTime, DailyCandle> candles = createTestDailyCandlesWithClosePrice();
+	    TreeMap<LocalDateTime, Double> emaMap = Calculator.getExponentialMovingAverage(candles, 10);
+	    TreeMap<LocalDateTime, Double> emaDistMap = Calculator.getEmaDistance(candles, emaMap);
+	    for (Entry<LocalDateTime, Double> entry : emaDistMap.entrySet()) {
+	        System.out.println(entry);
+	    }
+	}
+	
+	private static void testGetEmaSlope() {
+	    TreeMap<LocalDateTime, DailyCandle> candles = createTestDailyCandlesWithClosePrice();
+        TreeMap<LocalDateTime, Double> emaMap = Calculator.getExponentialMovingAverage(candles, 10);
+        TreeMap<LocalDateTime, Double> emaSlopeMap = Calculator.getEmaSlope(emaMap);
+        for (Entry<LocalDateTime, Double> entry : emaSlopeMap.entrySet()) {
+            System.out.println(entry);
+        }
+	}
+	
+	private static void testGetPriceDistance() {
+	    TreeMap<LocalDateTime, DailyCandle> candles = createTestDailyCandlesWithClosePrice();
+	    TreeMap<LocalDateTime, Double> priceDistMap = Calculator.getPriceDist(candles, CandleDataType.CLOSE);
+	    for (Entry<LocalDateTime, Double> entry : priceDistMap.entrySet()) {
+	        System.out.println(entry);   
+	    }
 	}
 	
 	// see here as an example:
-	// http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages
-	private static void testEma() { 
-	    TreeMap<LocalDateTime, DailyCandle> candles = new TreeMap<>();
-	    candles.put(
-	            LocalDateTime.of(LocalDate.of(2010, 03, 24), LocalTime.of(0, 0)),
-	            new DailyCandle().withClose(22.27));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 03, 25), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.19));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 03, 26), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.08));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 03, 29), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.17));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 03, 30), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.18));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 03, 31), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.13));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 1), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.23));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 5), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.43));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 6), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.24));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 7), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.29));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 8), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.15));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 9), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.39));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 12), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.38));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 13), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(22.61));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 14), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(23.36));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 15), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(24.05));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 16), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(23.75));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 19), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(23.83));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 20), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(23.95));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 21), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(23.63));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 22), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(23.82));
-	    candles.put(
-                LocalDateTime.of(LocalDate.of(2010, 4, 23), LocalTime.of(0, 0)),
-                new DailyCandle().withClose(23.87));
-	    
+    // http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages
+    private static void testEma() { 
+        TreeMap<LocalDateTime, DailyCandle> candles = createTestDailyCandlesWithClosePrice();
         TreeMap<LocalDateTime, Double> outputMap = Calculator.getExponentialMovingAverage(candles, 10);
         for (Entry<LocalDateTime, Double> entry : outputMap.entrySet()) {
             System.out.println(entry.getKey() + " " + entry.getValue());
         }
+    }
+	
+    private static TreeMap<LocalDateTime, DailyCandle> createTestDailyCandlesWithAllPrices() {
+        TreeMap<LocalDateTime, DailyCandle> candles = new TreeMap<>();
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 24), LocalTime.of(0, 0)),
+                new DailyCandle()
+                    .withDate(LocalDate.of(2010, 03, 24))
+                    .withOpen(10.0)
+                    .withHigh(11.0)
+                    .withLow(9.0)
+                    .withClose(9.0));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 25), LocalTime.of(0, 0)),
+                new DailyCandle()
+                    .withDate(LocalDate.of(2010, 03, 25))
+                    .withOpen(8.0)
+                    .withHigh(12.0)
+                    .withLow(7.0)
+                    .withClose(12.0));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 26), LocalTime.of(0, 0)),
+                new DailyCandle()
+                    .withDate(LocalDate.of(2010, 03, 26))
+                    .withOpen(12.0)
+                    .withHigh(14.0)
+                    .withLow(11.0)
+                    .withClose(13.0));        
+        return candles;
+    }
+    
+	private static TreeMap<LocalDateTime, DailyCandle> createTestDailyCandlesWithVolume() {
+	    TreeMap<LocalDateTime, DailyCandle> candles = new TreeMap<>();
+	    candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 24), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(1));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 25), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(2));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 26), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(3));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 29), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(4));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 30), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(5));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 31), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(6));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 1), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(7));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 5), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(8));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 6), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(9));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 7), LocalTime.of(0, 0)),
+                new DailyCandle().withVolume(10));
+        return candles;
+	}
+	
+	private static TreeMap<LocalDateTime, DailyCandle> createTestDailyCandlesWithClosePrice() {
+	    TreeMap<LocalDateTime, DailyCandle> candles = new TreeMap<>();
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 24), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.27));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 25), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.19));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 26), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.08));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 29), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.17));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 30), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.18));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 03, 31), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.13));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 1), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.23));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 5), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.43));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 6), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.24));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 7), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.29));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 8), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.15));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 9), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.39));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 12), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.38));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 13), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(22.61));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 14), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.36));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 15), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(24.05));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 16), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.75));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 19), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.83));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 20), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.95));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 21), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.63));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 22), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.82));
+        candles.put(
+                LocalDateTime.of(LocalDate.of(2010, 4, 23), LocalTime.of(0, 0)),
+                new DailyCandle().withClose(23.87));
+        return candles;
 	}
 	
 	private static void deleteSymbols() throws Exception {

@@ -42,6 +42,6 @@ public class DailyCandle extends AbstractCandle implements Comparable<DailyCandl
     
     @Override
     public String toString() {
-        return String.format("date=%s, %s" + getDateString(), super.toString());
+        return String.format("date=%s, %s", getDateString(), super.toString());
     }
 }

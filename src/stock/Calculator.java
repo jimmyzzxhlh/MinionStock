@@ -1,5 +1,6 @@
 package stock;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -92,8 +93,9 @@ public class Calculator {
             // Beware - This means that we are calculating profit and loss based on the close price of the current
             // weekly candle. However, we can only buy or sell stock on the next week's open price!
             // But it's OK -- doesn't affect our ability to predict the price movement.
-            double profit = max - firstCandle.getClose();
-            double loss = min - firstCandle.getClose();
+            double lastClose = firstCandle.getClose();
+            double profit = max / lastClose - 1.0;
+            double loss = min / lastClose - 1.0;
             
             profitMap.put(firstCandle.getDateTime(), new ProfitAndLoss(profit, loss));
         }
@@ -102,7 +104,9 @@ public class Calculator {
     }   
     
     /**
-     * For each weekly candle, get the distance between open/high/low/close and the last week's close price, in percentage.
+     * For each candle, get the distance between open/high/low/close and the last candle's close price, in percentage.
+     * 
+     * @param type Type of price for the current candle to compare with the last candle's close price.
      */
     public static <T extends AbstractCandle> TreeMap<LocalDateTime, Double> getPriceDist(TreeMap<LocalDateTime, T> candles, CandleDataType type) { 
         TreeMap<LocalDateTime, Double> distMap = new TreeMap<>();
@@ -110,23 +114,25 @@ public class Calculator {
             return distMap;
         }
         Iterator<Entry<LocalDateTime, T>> iterator = candles.entrySet().iterator();
-        Entry<LocalDateTime, T> lastEntry = iterator.next();
+        T lastCandle = iterator.next().getValue();
         
         while (iterator.hasNext()) {
             Entry<LocalDateTime, T> currentEntry = iterator.next();
-            T lastCandle = lastEntry.getValue();
             T currentCandle = currentEntry.getValue();
             
             distMap.put(
                 currentEntry.getKey(),
                 (currentCandle.getStockPrice(type) - lastCandle.getClose()) / lastCandle.getClose());
+            
+            lastCandle = currentCandle;            
         }
         
         return distMap;        
     }
     
     /**
-     * Given a map of candles and their EMAs, calculate the distance between the EMA and the closing price.  
+     * Given a map of candles and their EMAs, calculate the distance between the EMA and the closing price,
+     * with respect to the EMA price.
      */
     public static <T extends AbstractCandle> TreeMap<LocalDateTime, Double> getEmaDistance(
         TreeMap<LocalDateTime, T> candles, TreeMap<LocalDateTime, Double> ema) {
@@ -140,16 +146,23 @@ public class Calculator {
     }
     
     /**
-     * Given a map of EMAs, calculate the slope of the EMA. 
+     * Given a map of EMAs, calculate the slope of the EMA (distance / previous EMA)
      */
     public static TreeMap<LocalDateTime, Double> getEmaSlope(TreeMap<LocalDateTime, Double> ema) {
         TreeMap<LocalDateTime, Double> emaSlope = new TreeMap<>();
-        double previousEma = 0;
-        for (Entry<LocalDateTime, Double> entry : ema.entrySet()) {
-            if (previousEma > 0) {
-                emaSlope.put(entry.getKey(), entry.getValue() / previousEma - 1.0);                    
-            }
-            previousEma = entry.getValue();            
+        if (ema.size() <= 1) {
+            return emaSlope;
+        }
+        
+        Iterator<Entry<LocalDateTime, Double>> iterator = ema.entrySet().iterator();
+        double previousEma = iterator.next().getValue();
+        
+        while (iterator.hasNext()) {
+            Entry<LocalDateTime, Double> entry = iterator.next();
+            LocalDateTime dateTime = entry.getKey();
+            double currentEma = entry.getValue();
+            emaSlope.put(dateTime, currentEma / previousEma - 1.0);
+            previousEma = currentEma;
         }
         return emaSlope;
     }
@@ -180,7 +193,7 @@ public class Calculator {
             LocalDateTime dateTime = entry.getKey();
             T candle = entry.getValue();
             long currentVolume = candle.getVolume();
-            relativeVolumeMap.put(dateTime, currentVolume * 1.0 / pastVolumeSum);
+            relativeVolumeMap.put(dateTime, currentVolume / (pastVolumeSum * 1.0 / period));
             
             pastVolumeSum = pastVolumeSum - queue.poll().getVolume() + currentVolume;
             queue.offer(candle);

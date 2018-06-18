@@ -43,8 +43,8 @@ public class Sanitize {
 //        splitAdjustedData();
 //        writeAdjustedPriceFile();
 //        findStockWithBothSplitAndDividend();
-        filterStock();
-//        writeFeatures();
+//        filterStock();
+        writeFeatures();
     }
     
     /**
@@ -114,7 +114,7 @@ public class Sanitize {
      * @throws Exception
      */
     private static void writeFeatures() throws Exception {
-        File inputFile = new File("data/EOD_20180119_adjusted.csv");
+        File inputFile = new File("data/EOD_20180119_adjusted_filtered.csv");
         File outputFile = new File("data/EOD_20180119_features.csv");
         File errorFile = new File("data/EOD_20180119_weekskipped.csv");
         
@@ -130,6 +130,8 @@ public class Sanitize {
             bw.write(
                 // The price here is the relevant price movement in percentage against the last week's close price.
                 "Symbol,Date,Open,High,Low,Close," +
+                // EMA raw data, for debuging only
+                "EMA4,EMA12,EMA26,EMA52," + 
                 // How far is the current close price from the EMA
                 "Dist4,Dist12,Dist26,Dist52," +
                 // Slope for the EMA line
@@ -144,7 +146,6 @@ public class Sanitize {
             String line;
             String lastSymbol = "";
             while ((line = br.readLine()) != null) {
-                System.out.println(line);
                 String[] data = line.split(",");
                 String symbol = data[0];
                 
@@ -153,9 +154,11 @@ public class Sanitize {
                 }
                 
                 if (lastSymbol.length() > 0 && !lastSymbol.equals(symbol)) {
+                    System.out.println(lastSymbol);
                     writeWeeklyEmaToFile(lastSymbol, weeklyCandles, bw);
                     weeklyCandles = new TreeMap<>();
-                    break;
+                    weeklyCandle = null;
+//                    break;
                 }
                 
                 lastSymbol = symbol;
@@ -176,7 +179,8 @@ public class Sanitize {
                 
                 // The very first candle in the whole file.                
                 if (weeklyCandle == null) {                    
-                    weeklyCandle = new WeeklyCandle(date);                    
+                    weeklyCandle = new WeeklyCandle(date);  
+                    weeklyCandle.addDailyCandle(candle);
                 }
                 else {
                     // Check if the week is changed. If yes, make sure we are not skipping any weeks.
@@ -186,23 +190,36 @@ public class Sanitize {
                     int year = date.get(IsoFields.WEEK_BASED_YEAR);
                     if (week != currentWeek) {     
                         if (week != currentWeek + 1 && !(week == 1 && year == currentYear + 1)) {
+                            // If the week is skipped, flush the current weekly candles. 
                             bwError.write(String.format("%s,%d,%d,%d,%d", symbol, currentWeek, currentYear, week, year));
                             bwError.newLine();
+                            writeWeeklyEmaToFile(symbol, weeklyCandles, bw);
+                            weeklyCandles = new TreeMap<>();
+                            weeklyCandle = new WeeklyCandle(date);
+                            weeklyCandle.addDailyCandle(candle);
                         }
-                        // Add the weekly candle to map and create a new weekly candle because the week is changed.
-                        weeklyCandles.put(CommonUtil.getDateTime(weeklyCandle.getStartDate()), weeklyCandle);
-                        weeklyCandle = new WeeklyCandle(date);
-                        weeklyCandle.addDailyCandle(candle);
+                        else {
+                            // Add the weekly candle to map and create a new weekly candle because the week is changed.
+                            weeklyCandles.put(CommonUtil.getDateTime(weeklyCandle.getStartDate()), weeklyCandle);
+                            weeklyCandle = new WeeklyCandle(date);
+                            weeklyCandle.addDailyCandle(candle);
+                        }
                     }
                     else if (currentYear == year) {
                         weeklyCandle.addDailyCandle(candle);    
                     }
                     else {
+                        // Same as above, flush the current weekly candles.
                         bwError.write(String.format("%s,%d,%d,%d,%d", symbol, currentWeek, currentYear, week, year));
                         bwError.newLine();
+                        writeWeeklyEmaToFile(symbol, weeklyCandles, bw);
+                        weeklyCandles = new TreeMap<>();
+                        weeklyCandle = new WeeklyCandle(date);
+                        weeklyCandle.addDailyCandle(candle);
                     }
                 }                
             }
+            System.out.println(lastSymbol);
             writeWeeklyEmaToFile(lastSymbol, weeklyCandles, bw);
         }   
     }
@@ -226,9 +243,9 @@ public class Sanitize {
         TreeMap<LocalDateTime, Double> emaDistFiftyTwoWeeks = Calculator.getEmaDistance(weeklyCandles, emaFiftyTwoWeeks);
         
         TreeMap<LocalDateTime, Double> emaSlopeFourWeeks = Calculator.getEmaSlope(emaFourWeeks);
-        TreeMap<LocalDateTime, Double> emaSlopeTwelveWeeks = Calculator.getEmaSlope(emaDistTwelveWeeks);
-        TreeMap<LocalDateTime, Double> emaSlopeTwentySixWeeks = Calculator.getEmaSlope(emaDistTwentySixWeeks);
-        TreeMap<LocalDateTime, Double> emaSlopeFiftyTwoWeeks = Calculator.getEmaSlope(emaDistFiftyTwoWeeks);
+        TreeMap<LocalDateTime, Double> emaSlopeTwelveWeeks = Calculator.getEmaSlope(emaTwelveWeeks);
+        TreeMap<LocalDateTime, Double> emaSlopeTwentySixWeeks = Calculator.getEmaSlope(emaTwentySixWeeks);
+        TreeMap<LocalDateTime, Double> emaSlopeFiftyTwoWeeks = Calculator.getEmaSlope(emaFiftyTwoWeeks);
         
         TreeMap<LocalDateTime, Double> volumeFourWeeks = Calculator.getRelativeVolume(weeklyCandles, 4);
         TreeMap<LocalDateTime, Double> volumeTwelveWeeks = Calculator.getRelativeVolume(weeklyCandles, 12);
@@ -239,9 +256,26 @@ public class Sanitize {
         TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossTwelveWeeks = Calculator.getProfitAndLoss(weeklyCandles, 12);
         TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossTwentySixWeeks = Calculator.getProfitAndLoss(weeklyCandles, 26);
         
-        // Loop from the map that has the least data (needs 53 candles)
+        // Print out the time range for which we have all the features and targets.
+        LocalDateTime startDateTime = null;
+        LocalDateTime endDateTime = null;
+        // Choose ema slope fifty two weeks feature since it needs 53 weeks in the past for calculation.
+        if (!emaSlopeFiftyTwoWeeks.isEmpty()) {
+            startDateTime = emaSlopeFiftyTwoWeeks.firstKey();
+        }
+        // Choose profit and loss twenty six weeks target since it needs 26 weeks in the future for calculation. 
+        if (!profitAndLossTwentySixWeeks.isEmpty()) {
+            endDateTime = profitAndLossTwentySixWeeks.lastKey();            
+        }         
+        System.out.println(startDateTime + " - " + endDateTime);
+        
         for (Entry<LocalDateTime, Double> entry : emaSlopeFiftyTwoWeeks.entrySet()) {
             LocalDateTime dateTime = entry.getKey();
+            // We do not know the so we can't calculate the target.
+            if (!profitAndLossTwentySixWeeks.containsKey(dateTime)) {
+                break;
+            }
+                
             bw.write(StringUtils.join(Arrays.asList(
                 symbol,
                 CommonUtil.formatDate(dateTime.toLocalDate()),
@@ -249,6 +283,10 @@ public class Sanitize {
                 highDist.get(dateTime),
                 lowDist.get(dateTime),
                 closeDist.get(dateTime),
+                emaFourWeeks.get(dateTime),
+                emaTwelveWeeks.get(dateTime),
+                emaTwentySixWeeks.get(dateTime),
+                emaFiftyTwoWeeks.get(dateTime),
                 emaDistFourWeeks.get(dateTime),
                 emaDistTwelveWeeks.get(dateTime),
                 emaDistTwentySixWeeks.get(dateTime),

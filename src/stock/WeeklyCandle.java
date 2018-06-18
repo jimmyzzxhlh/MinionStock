@@ -3,6 +3,7 @@ package stock;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.IsoFields;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
@@ -16,15 +17,16 @@ public class WeeklyCandle extends AbstractCandle {
     private TreeMap<LocalDateTime, DailyCandle> dailyCandles;
     
     // See http://joda-time.sourceforge.net/field.html
-    private LocalDate startDate;
     private int week;  // Week of week based year
     private int year;  // Week based year
     
     public WeeklyCandle(LocalDate startDate) {
-        this.startDate = startDate;
+        this.dt = LocalDateTime.of(startDate, LocalTime.of(0, 0));
         this.year = startDate.get(IsoFields.WEEK_BASED_YEAR);
         this.week = startDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
         this.dailyCandles = new TreeMap<>();
+        this.low = Double.MAX_VALUE;
+        this.high = Double.MIN_VALUE;
     }
     
     public int getYear() {
@@ -36,7 +38,8 @@ public class WeeklyCandle extends AbstractCandle {
     }
     
     public LocalDate getStartDate() {
-        return startDate;
+        if (this.dt == null) return null;
+        return this.dt.toLocalDate();
     }
     
     public void addDailyCandle(DailyCandle candle) {

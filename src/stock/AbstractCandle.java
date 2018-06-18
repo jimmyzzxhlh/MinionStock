@@ -2,6 +2,8 @@ package stock;
 
 import java.time.LocalDateTime;
 
+import org.joda.time.DateTime;
+
 import enums.StockEnum.CandleDataType;
 
 /**
@@ -94,7 +96,7 @@ public abstract class AbstractCandle {
     
     @Override
     public String toString() {
-        return String.format("open=%d, close=%d, low=%d, high=%d, volume=%d",
-                               open, close, low, high, volume);
+        return String.format("datetime=%s, open=%f, high=%f, low=%f, close=%f, volume=%d",
+            dt == null ? "null" : dt.toString(), open, high, low, close, volume);
     }
 }
