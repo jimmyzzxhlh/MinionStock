@@ -137,7 +137,7 @@ public class Sanitize {
                 // Slope for the EMA line
                 "Slope4,Slope12,Slope26,Slope52," +
                 // Current volume / previous X weeks average volume (excluding current week)
-                "volume4,volume12,volume26,volume52," +
+                "Volume4,Volume12,Volume26,Volume52," +
                 // Maximum profit in the next X weeks (i.e. compare to high price)
                 "Profit4,Profit12,Profit26," +
                 // Maximum loss in the next X weeks (i.e. compare to low price)
