@@ -44,28 +44,49 @@ public class Sanitize {
 //        writeAdjustedPriceFile();
 //        findStockWithBothSplitAndDividend();
 //        filterStock();
-        writeFeatures();
+//        writeFeatures();        
+//        verifyFeatures();
+        filterFeatures();
+    }
+    
+    private static void verifyFeatures() throws Exception {
+        File inputFile = new File("data/EOD_20180119_features.csv");
+        
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+        ) {
+            String line = br.readLine();
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                for (int i = 2; i < data.length; i++) {
+                    if (data[i].matches("[a-zA-Z]+")) {
+                        System.out.println(line);
+                    }
+                }
+            }
+        }
     }
     
     /**
-     * Filter stock that:
-     * - Does not have a valid symbol
-     * - Has an average daily volume * close price < 1 million
+     * Filter features that do not have a sufficient amount of turnover.  
+     * The standard is:
+     * 1. Symbol should be valid (Only letters).
+     * 2. Current week's close price should be > 1.0
+     * 3. Current week's volume * close price should be > 1 million.
+     * Notice that the filter should not do anything with predicting the price, otherwise we would get a system
+     * that performs super well on the training data and very bad on the real data.
+     *  
      * @throws Exception
      */
-    private static void filterStock() throws Exception {
-        File inputFile = new File("data/EOD_20180119_adjusted.csv");
-        File outputFile = new File("data/EOD_20180119_adjusted_filtered.csv");
+    private static void filterFeatures() throws Exception {
+        File inputFile = new File("data/EOD_20180119_features.csv");
+        File outputFile = new File("data/EOD_20180119_features_filtered.csv");
         
         try (
             BufferedReader br = new BufferedReader(new FileReader(inputFile));
             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
         ) {
-            String line;
-            String lastSymbol = "";
-            int count = 0;
-            double turnover = 0;
-            StringBuilder sb = new StringBuilder();            
+            String line = br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] data = line.split(",");
                 String symbol = data[0];
@@ -74,31 +95,22 @@ public class Sanitize {
                     continue;
                 }
                 
-                if (lastSymbol.length() > 0 && !lastSymbol.equals(symbol)) {
-                    System.out.print(symbol);                    
-                    if (turnover / count > 1e6) {
-                        bw.write(sb.toString());                        
-                    }
-                    else {
-                        System.out.print(" does not have enough average turnover: " + turnover / count);
-                    }
-                    System.out.println();
-                    count = 0;
-                    turnover = 0;
-                    sb = new StringBuilder();                    
+                double close = Double.valueOf(data[24]);
+                if (close < 1.0) {
+                    continue;
                 }
                 
-                lastSymbol = symbol;
-                double close = Double.valueOf(data[5]);
-                long volume = Long.valueOf(data[6]);
-                count++;
-                turnover += close * volume;
-                sb.append(line);                
-                sb.append(System.lineSeparator());                
+                long volume = Long.valueOf(data[25]);
+                if (close * volume < 1e6) {
+                    continue;
+                }
+                
+                bw.write(line);
+                bw.newLine();
             }
         }
     }
-    
+        
     /**
      * Write the following features given an adjusted price file
      * - (Weekly Close Price / X week EMA) - 1
@@ -114,7 +126,7 @@ public class Sanitize {
      * @throws Exception
      */
     private static void writeFeatures() throws Exception {
-        File inputFile = new File("data/EOD_20180119_adjusted_filtered.csv");
+        File inputFile = new File("data/EOD_20180119_adjusted.csv");
         File outputFile = new File("data/EOD_20180119_features.csv");
         File errorFile = new File("data/EOD_20180119_weekskipped.csv");
         
@@ -129,9 +141,7 @@ public class Sanitize {
             //todo - calculate target labels profit and volume
             bw.write(
                 // The price here is the relevant price movement in percentage against the last week's close price.
-                "Symbol,Date,Open,High,Low,Close," +
-                // EMA raw data, for debuging only
-                "EMA4,EMA12,EMA26,EMA52," + 
+                "Symbol,Date,Open,High,Low,Close," +                 
                 // How far is the current close price from the EMA
                 "Dist4,Dist12,Dist26,Dist52," +
                 // Slope for the EMA line
@@ -141,7 +151,10 @@ public class Sanitize {
                 // Maximum profit in the next X weeks (i.e. compare to high price)
                 "Profit4,Profit12,Profit26," +
                 // Maximum loss in the next X weeks (i.e. compare to low price)
-                "Loss4,Loss12,Loss26");
+                "Loss4,Loss12,Loss26," +
+                // Raw data, for filter before training.
+                // Close price and volume of the current candle. 
+                "CurrentClose,CurrentVolume");
             bw.newLine();
             String line;
             String lastSymbol = "";
@@ -200,7 +213,7 @@ public class Sanitize {
                         }
                         else {
                             // Add the weekly candle to map and create a new weekly candle because the week is changed.
-                            weeklyCandles.put(CommonUtil.getDateTime(weeklyCandle.getStartDate()), weeklyCandle);
+                            weeklyCandles.put(CommonUtil.getDateTime(weeklyCandle.getEndDate()), weeklyCandle);
                             weeklyCandle = new WeeklyCandle(date);
                             weeklyCandle.addDailyCandle(candle);
                         }
@@ -272,7 +285,8 @@ public class Sanitize {
         for (Entry<LocalDateTime, Double> entry : emaSlopeFiftyTwoWeeks.entrySet()) {
             LocalDateTime dateTime = entry.getKey();
             // We do not know the so we can't calculate the target.
-            if (!profitAndLossTwentySixWeeks.containsKey(dateTime)) {
+            // Notice that for volume we only need to check four weeks because if 8 weeks volume is 0 then 4 week volume is also 0. 
+            if (!profitAndLossTwentySixWeeks.containsKey(dateTime) || !volumeFourWeeks.containsKey(dateTime)) {
                 break;
             }
                 
@@ -283,10 +297,10 @@ public class Sanitize {
                 highDist.get(dateTime),
                 lowDist.get(dateTime),
                 closeDist.get(dateTime),
-                emaFourWeeks.get(dateTime),
-                emaTwelveWeeks.get(dateTime),
-                emaTwentySixWeeks.get(dateTime),
-                emaFiftyTwoWeeks.get(dateTime),
+//                emaFourWeeks.get(dateTime),
+//                emaTwelveWeeks.get(dateTime),
+//                emaTwentySixWeeks.get(dateTime),
+//                emaFiftyTwoWeeks.get(dateTime),
                 emaDistFourWeeks.get(dateTime),
                 emaDistTwelveWeeks.get(dateTime),
                 emaDistTwentySixWeeks.get(dateTime),
@@ -304,7 +318,9 @@ public class Sanitize {
                 profitAndLossTwentySixWeeks.get(dateTime).getProfit(),
                 profitAndLossFourWeeks.get(dateTime).getLoss(),
                 profitAndLossTwelveWeeks.get(dateTime).getLoss(),
-                profitAndLossTwentySixWeeks.get(dateTime).getLoss()                
+                profitAndLossTwentySixWeeks.get(dateTime).getLoss(),
+                weeklyCandles.get(dateTime).getClose(),
+                weeklyCandles.get(dateTime).getVolume()
             ), ","));
             bw.newLine();
         }

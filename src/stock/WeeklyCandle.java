@@ -37,7 +37,11 @@ public class WeeklyCandle extends AbstractCandle {
         return week;
     }
     
-    public LocalDate getStartDate() {
+    /**
+     * Get the end date of the weekly candle.
+     * This can be used as a key for a list of weekly candles.
+     */
+    public LocalDate getEndDate() {
         if (this.dt == null) return null;
         return this.dt.toLocalDate();
     }
@@ -61,7 +65,11 @@ public class WeeklyCandle extends AbstractCandle {
                 candle.getDateTime(), dailyCandles.get(candle.getDateTime()).toString(), candle));
         }
         
-        this.dailyCandles.put(candle.getDateTime(), candle);
+        // Put the candle and also update the date time of the weekly candle so that the date time
+        // always tracks the last daily candle.
+        this.dailyCandles.put(candle.getDateTime(), candle);        
+        this.dt = this.dailyCandles.lastKey();
+        
         this.open = this.dailyCandles.firstEntry().getValue().getOpen();
         this.high = Math.max(this.high, candle.getHigh());
         this.low = Math.min(this.low, candle.getLow());
