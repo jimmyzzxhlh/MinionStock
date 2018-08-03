@@ -11,15 +11,11 @@ import java.time.temporal.IsoFields;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import javax.lang.model.type.PrimitiveType;
-
-import java.util.Queue;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -30,10 +26,10 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 import enums.StockEnum.CandleDataType;
+import stock.Calculator;
 import stock.DailyCandle;
 import stock.Dividend;
 import stock.ProfitAndLoss;
-import stock.Calculator;
 import stock.Split;
 import stock.WeeklyCandle;
 import util.CommonUtil;
@@ -46,11 +42,155 @@ public class Sanitize {
 //        filterStock();
 //        writeFeatures();        
 //        verifyFeatures();
-        filterFeatures();
+//        filterFeatures();
+//        fixOriginalPrice();
+//        fixDecimalsForOriginalPrice();
+//        checkDailyGap();
+        checkNormalGap();
+    }
+    
+    private static void checkNormalGap() throws Exception {
+        File gapFile = new File("data/normal_gap.csv");
+        File inputFile = new File("data/EOD_20180119_adjusted.csv");
+        
+        try (
+            BufferedReader brGap = new BufferedReader(new FileReader(gapFile));
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+        ) {
+            String line;
+            Set<String> set = new TreeSet<>();
+            while ((line = brGap.readLine()) != null) {
+                String[] data = line.split(",");
+                String symbol = data[0];
+                String date = data[1];
+                set.add(symbol + date);
+            }
+            System.out.println(set.contains("ACAD20070319"));
+            System.out.println(set.contains("ACAD20090504"));
+//            System.out.println(set);
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                String symbol = data[0];
+                String date = data[1];
+                if (symbol.equals("ACAD") && date.equals("20070319")) {
+                    System.out.println("ACAD20070319: " + set.contains(symbol + date));
+                }
+                if (set.contains(symbol + date)) {
+                    set.remove(symbol + date);
+                }
+            }
+            for (String s : set) {
+                System.out.println(s);
+            }
+        }
+    }
+    
+    private static void checkDailyGap() throws Exception {
+        File inputFile = new File("data/EOD_20180119_adjusted.csv");
+        File outputFile = new File("data/EOD_20180119_adjusted_gap.csv");
+        
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
+        ) {
+            String line;
+            String lastSymbol = "";
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                String symbol = data[0];
+            }
+        }        
+    }
+    
+    private static void fixDecimalsForOriginalPrice() throws Exception {
+        File inputFile = new File("data/EOD_20180119_original.csv");
+        File outputFile = new File("data/EOD_20180119_original_v2.csv");
+        
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
+        ) {
+            String line;
+            String lastSymbol = "";
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                String symbol = data[0];
+                String date = data[1];
+                String openStr = data[2];
+                String highStr = data[3];
+                String lowStr = data[4];
+                String closeStr = data[5];
+                String volume = data[6];
+                bw.write(StringUtils.join(Arrays.asList(
+                        symbol,
+                        date,
+                        getDecimalFixedString(openStr),
+                        getDecimalFixedString(highStr),
+                        getDecimalFixedString(lowStr),
+                        getDecimalFixedString(closeStr),
+                        volume), ","));
+                bw.newLine();
+            }
+        }
+    }
+    
+    private static String getDecimalFixedString(String str) {
+        double value = Double.valueOf(str);
+        if (value < 10) {
+            if (str.length() > 6) {
+                return String.format("%.4f", value);
+            }
+            return str;
+        }
+        else {
+            if (str.length() > 4) {
+                return String.format("%.2f", value);
+            }
+            return str;
+        }
+    }
+    
+    private static void fixOriginalPrice() throws Exception {
+        File inputFile = new File("data/EOD_20180119_original.csv");
+        File fixFile = new File("data/data_to_be_fixed.csv");
+        File outputFile = new File("data/EOD_20180119_original_v2.csv");
+        
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(inputFile));
+            BufferedReader brFix = new BufferedReader(new FileReader(fixFile));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
+        ) {
+            Map<String, String> fixMap = new HashMap<>();
+            int totalFixCount = 0;
+            String line;
+            while ((line = brFix.readLine()) != null) {
+                String[] data = line.split(",");
+                String symbol = data[0];
+                String date = data[1];
+                fixMap.put(symbol + date, line);
+            }
+            
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(",");
+                String symbol = data[0];
+                String date = data[1];
+                String key = symbol + date;
+                if (fixMap.containsKey(key)) {
+                    bw.write(fixMap.get(key));
+                    totalFixCount++;
+                    System.out.println(fixMap.get(key));
+                }                    
+                else {
+                    bw.write(line);
+                }
+                bw.newLine();
+            }
+            System.out.println(totalFixCount);
+        }        
     }
     
     private static void verifyFeatures() throws Exception {
-        File inputFile = new File("data/EOD_20180119_features.csv");
+        File inputFile = new File("data/EOD_20180119_features_filtered.csv");
         
         try (
             BufferedReader br = new BufferedReader(new FileReader(inputFile));
@@ -58,10 +198,9 @@ public class Sanitize {
             String line = br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] data = line.split(",");
-                for (int i = 2; i < data.length; i++) {
-                    if (data[i].matches("[a-zA-Z]+")) {
-                        System.out.println(line);
-                    }
+                double open = Double.valueOf(data[2]);
+                if (open > 0.5) {
+                    System.out.println(line);
                 }
             }
         }
@@ -73,6 +212,7 @@ public class Sanitize {
      * 1. Symbol should be valid (Only letters).
      * 2. Current week's close price should be > 1.0
      * 3. Current week's volume * close price should be > 1 million.
+     * 4. EMA4 > EMA12 > EMA26 > EMA52 (> Current week's close?)
      * Notice that the filter should not do anything with predicting the price, otherwise we would get a system
      * that performs super well on the training data and very bad on the real data.
      *  
@@ -80,13 +220,15 @@ public class Sanitize {
      */
     private static void filterFeatures() throws Exception {
         File inputFile = new File("data/EOD_20180119_features.csv");
-        File outputFile = new File("data/EOD_20180119_features_filtered.csv");
+        File outputFile = new File("data/EOD_20180119_features_filtered_v2.csv");
         
         try (
             BufferedReader br = new BufferedReader(new FileReader(inputFile));
             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile));
         ) {
             String line = br.readLine();
+            bw.write(line);
+            bw.newLine();
             while ((line = br.readLine()) != null) {
                 String[] data = line.split(",");
                 String symbol = data[0];
@@ -102,6 +244,15 @@ public class Sanitize {
                 
                 long volume = Long.valueOf(data[25]);
                 if (close * volume < 1e6) {
+                    continue;
+                }
+                
+                double emaFourWeeks = Double.valueOf(data[26]);
+                double emaTwelveWeeks = Double.valueOf(data[27]);
+                double emaTwentySixWeeks = Double.valueOf(data[28]);
+                double emaFiftyTwoWeeks = Double.valueOf(data[29]);
+                // TODO - Consider relaxing the requirement by checking if the diff is > -x percent?
+                if (!(emaFourWeeks >= emaTwelveWeeks && emaTwelveWeeks >= emaTwentySixWeeks && emaTwentySixWeeks >= emaFiftyTwoWeeks)) {
                     continue;
                 }
                 
@@ -154,7 +305,7 @@ public class Sanitize {
                 "Loss4,Loss12,Loss26," +
                 // Raw data, for filter before training.
                 // Close price and volume of the current candle. 
-                "CurrentClose,CurrentVolume");
+                "CurrentClose,CurrentVolume,EMA4,EMA12,EMA26,EMA52");
             bw.newLine();
             String line;
             String lastSymbol = "";
@@ -320,7 +471,11 @@ public class Sanitize {
                 profitAndLossTwelveWeeks.get(dateTime).getLoss(),
                 profitAndLossTwentySixWeeks.get(dateTime).getLoss(),
                 weeklyCandles.get(dateTime).getClose(),
-                weeklyCandles.get(dateTime).getVolume()
+                weeklyCandles.get(dateTime).getVolume(),
+                emaFourWeeks.get(dateTime),
+                emaTwelveWeeks.get(dateTime),
+                emaTwentySixWeeks.get(dateTime),
+                emaFiftyTwoWeeks.get(dateTime)                
             ), ","));
             bw.newLine();
         }
