@@ -61,18 +61,18 @@ public class IexIntraDayData {
 		this.numberOfTrades = numberOfTrades;
 	}
 	
-    public IntraDayItem toIntraDayItem(String symbol) {
-        if (numberOfTrades <= 0) {
-            throw new IllegalArgumentException("Number of trades cannot be 0, no reason to put the data into DynamoDB.");
-        }
-        IntraDayItem item = new IntraDayItem();
-        item.setAverage(average);
-        item.setHigh(high);
-        item.setLow(low);
-        item.setNumberOfTrades(numberOfTrades);
-        item.setSymbol(symbol);
-        item.setTime(date + " " + minute);
-        
-        return item;
+  public IntraDayItem toIntraDayItem(String symbol) {
+    if (numberOfTrades <= 0) {
+      throw new IllegalArgumentException("Number of trades cannot be 0, no reason to put the data into DynamoDB.");
     }
+    IntraDayItem item = new IntraDayItem();
+    item.setAverage(average);
+    item.setHigh(high);
+    item.setLow(low);
+    item.setNumberOfTrades(numberOfTrades);
+    item.setSymbol(symbol);
+    item.setTime(date + " " + minute);
+    
+    return item;
+  }
 }

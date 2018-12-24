@@ -17,43 +17,43 @@ package main.job.daily;
 //import util.CommonUtil;
 //
 //public class IntraDayChartUpdater implements ChartUpdater {
-//    private static final Logger log = LoggerFactory.getLogger(IntraDayChartUpdater.class);
-//    private static final int HOUR = 17;
-//    private static final int MINUTE = 0;
-//    
-//    public void startJob() {
-//        downloadChart();
-//        CommonUtil.scheduleDailyJob(() -> downloadChart(), HOUR, MINUTE);
+//  private static final Logger log = LoggerFactory.getLogger(IntraDayChartUpdater.class);
+//  private static final int HOUR = 17;
+//  private static final int MINUTE = 0;
+//  
+//  public void startJob() {
+//    downloadChart();
+//    CommonUtil.scheduleDailyJob(() -> downloadChart(), HOUR, MINUTE);
+//  }
+//  
+//  private void downloadChart() {
+//    log.info("Start downloading intra day chart ...");
+//    Gson g = new Gson();
+//    for (String symbol : DownloadHelper.downloadCompanies().keySet()) {
+//      log.info("Getting intra day chart for " + symbol + " ...");
+//      String url = new IexUrlBuilder()
+//        .withChart()
+//        .withSymbol(symbol)
+//        .withOneDay()
+//        .build();
+//      String str = DownloadHelper.downloadURLToString(url);
+//      if (str.length() == 0) {
+//        log.warn("Nothing downloaded for " + symbol + ". Skipping ...");
+//        continue;
+//      }
+//      List<IntraDayData> dataList =
+//        Arrays.asList(g.fromJson(str, IntraDayData[].class))
+//            .stream()
+//            .filter(data -> data.getNumberOfTrades() > 0)
+//            .collect(Collectors.toList());
+//      
+//      log.info("Start saving " + dataList.size() + " items ...");
+//      for (IntraDayData data : dataList) {
+//        IntraDayItem item = data.toIntraDayItem(symbol);        
+//        DynamoDBProvider.getInstance().getMapper().save(item);
+//      }
+//      log.info("Done saving " + dataList.size() + " items.");      
 //    }
-//    
-//    private void downloadChart() {
-//        log.info("Start downloading intra day chart ...");
-//        Gson g = new Gson();
-//        for (String symbol : DownloadHelper.downloadCompanies().keySet()) {
-//            log.info("Getting intra day chart for " + symbol + " ...");
-//            String url = new IexUrlBuilder()
-//                .withChart()
-//                .withSymbol(symbol)
-//                .withOneDay()
-//                .build();
-//            String str = DownloadHelper.downloadURLToString(url);
-//            if (str.length() == 0) {
-//                log.warn("Nothing downloaded for " + symbol + ". Skipping ...");
-//                continue;
-//            }
-//            List<IntraDayData> dataList =
-//                Arrays.asList(g.fromJson(str, IntraDayData[].class))
-//                      .stream()
-//                      .filter(data -> data.getNumberOfTrades() > 0)
-//                      .collect(Collectors.toList());
-//            
-//            log.info("Start saving " + dataList.size() + " items ...");
-//            for (IntraDayData data : dataList) {
-//                IntraDayItem item = data.toIntraDayItem(symbol);                
-//                DynamoDBProvider.getInstance().getMapper().save(item);
-//            }
-//            log.info("Done saving " + dataList.size() + " items.");            
-//        }
-//        log.info("Done downloading intra day chart. Next update will be at " + CommonUtil.formatHourMinute(HOUR, MINUTE) + ".");        
-//    }
+//    log.info("Done downloading intra day chart. Next update will be at " + CommonUtil.formatHourMinute(HOUR, MINUTE) + ".");    
+//  }
 //}

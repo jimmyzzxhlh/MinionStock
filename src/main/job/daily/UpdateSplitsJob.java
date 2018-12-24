@@ -5,13 +5,13 @@ import main.job.JobEnum;
 
 public class UpdateSplitsJob extends DailyJob {
 
-    public UpdateSplitsJob() {
-        super(JobEnum.UPDATE_SPLITS);        
-    }
+  public UpdateSplitsJob() {
+    super(JobEnum.UPDATE_SPLITS);    
+  }
 
-    @Override
-    protected void doUpdate() throws JobException {
-                
-    }
+  @Override
+  protected void doUpdate() throws JobException {
+        
+  }
 
 }

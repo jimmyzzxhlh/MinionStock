@@ -4,33 +4,33 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum JobEnum {
-    UPDATE_COMPANY("UpdateCompany"),
-    UPDATE_DAILY_CHART("UpdateDailyChart"),
-    UPDATE_DIVIDEND("UpdateDividend"),
-    UPDATE_SPLITS("UpdateSplits"),
-    BACKFILL_DAILY_CHART("BackfillDailyChart");
-    
-    private final String enumStr;
-    private static final Map<String, JobEnum> map = new HashMap<>();
-    
-    static {
-        for (JobEnum e : JobEnum.values()) {
-            map.put(e.enumStr, e);
-        }
+  UPDATE_COMPANY("UpdateCompany"),
+  UPDATE_DAILY_CHART("UpdateDailyChart"),
+  UPDATE_DIVIDEND("UpdateDividend"),
+  UPDATE_SPLITS("UpdateSplits"),
+  BACKFILL_DAILY_CHART("BackfillDailyChart");
+  
+  private final String enumStr;
+  private static final Map<String, JobEnum> map = new HashMap<>();
+  
+  static {
+    for (JobEnum e : JobEnum.values()) {
+      map.put(e.enumStr, e);
     }
-    
-    private JobEnum(String enumStr) {
-        this.enumStr = enumStr;
+  }
+  
+  private JobEnum(String enumStr) {
+    this.enumStr = enumStr;
+  }
+  
+  public String toString() {
+    return enumStr;
+  }
+  
+  public static JobEnum get(String enumStr) {
+    if (map.containsKey(enumStr)) {
+      return map.get(enumStr);
     }
-    
-    public String toString() {
-        return enumStr;
-    }
-    
-    public static JobEnum get(String enumStr) {
-        if (map.containsKey(enumStr)) {
-            return map.get(enumStr);
-        }
-        throw new IllegalArgumentException(enumStr + " is not a valid JobEnum.");
-    }
+    throw new IllegalArgumentException(enumStr + " is not a valid JobEnum.");
+  }
 }

@@ -16,7 +16,7 @@ public class IexDailyData {
 	 * Get the date without hyphen! 
 	 */
 	public String getDate() {
-	    return date == null ? null : CommonUtil.removeHyphen(date);	    
+	  return date == null ? null : CommonUtil.removeHyphen(date);	  
 	}
 	public void setDate(String date) {
 		this.date = date;
@@ -58,28 +58,28 @@ public class IexDailyData {
 		this.vwap = vwap;
 	}
 	
-    /**
-     * Get a daily item from IEX daily data.
-     * 
-     * Notice that there might be data where only close price is present. We then set
-     * all the other prices to be the same as close price. 
-     */
-    public DailyItem toDailyItem(String symbol) { 
-        DailyItem item = new DailyItem();
-        item.setSymbol(symbol);
-        item.setDate(getDate());
-        item.setOpen(open > 0 ? open : close);
-        item.setClose(close);
-        item.setHigh(high > 0 ? high : close);
-        item.setLow(low > 0 ? low : close);
-        item.setVolume(volume);       
-        
-        return item;
-    }
+  /**
+   * Get a daily item from IEX daily data.
+   * 
+   * Notice that there might be data where only close price is present. We then set
+   * all the other prices to be the same as close price. 
+   */
+  public DailyItem toDailyItem(String symbol) { 
+    DailyItem item = new DailyItem();
+    item.setSymbol(symbol);
+    item.setDate(getDate());
+    item.setOpen(open > 0 ? open : close);
+    item.setClose(close);
+    item.setHigh(high > 0 ? high : close);
+    item.setLow(low > 0 ? low : close);
+    item.setVolume(volume);     
     
-    @Override
-    public String toString() {
-        return String.format("date = %s, open = %f, close = %f, high = %f, low = %f, vwap = %f, volume = %d",
-            getDate(), open, close, high, low, vwap, volume);
-    }
+    return item;
+  }
+  
+  @Override
+  public String toString() {
+    return String.format("date = %s, open = %f, close = %f, high = %f, low = %f, vwap = %f, volume = %d",
+      getDate(), open, close, high, low, vwap, volume);
+  }
 }

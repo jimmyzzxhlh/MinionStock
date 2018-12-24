@@ -1,4 +1,4 @@
 package dynamodb.item;
 
-public interface DynamoDBItem {    
+public interface DynamoDBItem {  
 }

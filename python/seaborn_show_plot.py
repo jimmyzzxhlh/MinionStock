@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 sns.set(color_codes=True)
-data_set = pd.read_csv('../data/spy_volatility_crossweek.csv')
-sns.distplot(data_set)
+x = np.random.normal(size=100)
+sns.distplot(x)
 
 plt.show()

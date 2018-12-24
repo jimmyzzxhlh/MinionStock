@@ -9,7 +9,7 @@ import dynamodb.DynamoDBConst;
 
 @DynamoDBTable(tableName=DynamoDBConst.TABLE_INTRA_DAY)
 public class IntraDayItem implements DynamoDBItem {
-    private String symbol;
+  private String symbol;
 	private String time;
 	private double high;
 	private double low;

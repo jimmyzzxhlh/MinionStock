@@ -9,7 +9,7 @@ import dynamodb.DynamoDBConst;
 
 @DynamoDBTable(tableName=DynamoDBConst.TABLE_DAILY)
 public class DailyItem implements DynamoDBItem {
-    private String symbol;
+  private String symbol;
 	private String date;
 	private double open;
 	private double close;	
@@ -20,12 +20,12 @@ public class DailyItem implements DynamoDBItem {
 	public DailyItem() {}
 	
 	public DailyItem(String symbol) {
-	    this.symbol = symbol;
+	  this.symbol = symbol;
 	}
 	
 	public DailyItem(String symbol, String date) {
-	    this.symbol = symbol;
-	    this.date = date;
+	  this.symbol = symbol;
+	  this.date = date;
 	}
 	
 	@DynamoDBHashKey(attributeName="S")
@@ -58,7 +58,7 @@ public class DailyItem implements DynamoDBItem {
 	
 	@Override
 	public String toString() {
-	    return String.format("symbol = %s, date = %s, open = %s, close = %s, high = %s, low = %s, volume = %s, vwap = %s",
-	        symbol, date, open, close, high, low, volume);	            
+	  return String.format("symbol = %s, date = %s, open = %s, close = %s, high = %s, low = %s, volume = %s, vwap = %s",
+	    symbol, date, open, close, high, low, volume);	      
 	}
 }

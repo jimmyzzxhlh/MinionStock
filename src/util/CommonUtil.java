@@ -31,22 +31,22 @@ public class CommonUtil {
 	 * @param dateString Date with format yyyyMMdd
 	 */
 	public static LocalDate parseDate(String dateString) {
-	    return LocalDate.parse(dateString, dateFormatter);		
+	  return LocalDate.parse(dateString, dateFormatter);		
 	}
 	
 	public static String formatDate(LocalDate date) {
-	    return date.format(dateFormatter);
+	  return date.format(dateFormatter);
 	}
 	
 	public static boolean isMarketClosedToday() {
-	    LocalDate date = getPacificTimeNow().toLocalDate();
-	    return date.getDayOfWeek() == DayOfWeek.SATURDAY ||
-            date.getDayOfWeek() == DayOfWeek.SUNDAY ||
-            holidayManager.isHoliday(date);
+	  LocalDate date = getPacificTimeNow().toLocalDate();
+	  return date.getDayOfWeek() == DayOfWeek.SATURDAY ||
+      date.getDayOfWeek() == DayOfWeek.SUNDAY ||
+      holidayManager.isHoliday(date);
 	}
 	
 	public static String removeHyphen(String dateString) {
-	    return dateString == null ? null : dateString.replace("-", "");
+	  return dateString == null ? null : dateString.replace("-", "");
 	}
 	
 	/**
@@ -54,19 +54,19 @@ public class CommonUtil {
 	 * e.g. hour = 9, minute = 5 -> "09:05"
 	 */
 	public static String formatTime(LocalTime time) {
-	    return time.format(timeFormatter);
+	  return time.format(timeFormatter);
 	}
 	
 	public static String formatDateTime(ZonedDateTime dateTime) {
-	    return dateTime.format(dateTimeFormatter);
+	  return dateTime.format(dateTimeFormatter);
 	}
 	
 	public static ZonedDateTime parseDateTime(String dateTimeString) {
-	    return ZonedDateTime.parse(dateTimeString, dateTimeFormatter);
+	  return ZonedDateTime.parse(dateTimeString, dateTimeFormatter);
 	}
 	
 	public static LocalDateTime getDateTime(LocalDate date) {
-	    return LocalDateTime.of(date, LocalTime.of(0, 0));
+	  return LocalDateTime.of(date, LocalTime.of(0, 0));
 	}
 	
 	/**
@@ -91,39 +91,39 @@ public class CommonUtil {
 	}
 	
 	public static ZonedDateTime getPacificTimeNow() {
-	    return ZonedDateTime.now(PACIFIC_ZONE_ID);
+	  return ZonedDateTime.now(PACIFIC_ZONE_ID);
 	}
 	
 	public static String getPacificDateNow() {
-	    return formatDate(getPacificTimeNow().toLocalDate());
+	  return formatDate(getPacificTimeNow().toLocalDate());
 	}
 	
 	public static <T> void requireNonNull(T obj, String objName) {
-	    Objects.requireNonNull(obj, objName + " cannot be null.");
+	  Objects.requireNonNull(obj, objName + " cannot be null.");
 	}
 	
 	public static <T> void requireEqual(T firstObj, T secondObj) {
-	    if (firstObj == null || secondObj == null) {
-	        throw new IllegalArgumentException("Cannot pass null objects to check equality.");
-	    }
-	    if (firstObj.equals(secondObj)) {
-	        return;
-	    }
-	    String message = new StringBuilder()
-	        .append("Objects are not equal.")
-	        .append(System.lineSeparator())
-	        .append("First object : ")
-	        .append(firstObj.toString())
-	        .append(System.lineSeparator())
-	        .append("Second object: ")
-	        .append(secondObj.toString())
-	        .toString();	    
-	    throw new IllegalArgumentException(message);
+	  if (firstObj == null || secondObj == null) {
+	    throw new IllegalArgumentException("Cannot pass null objects to check equality.");
+	  }
+	  if (firstObj.equals(secondObj)) {
+	    return;
+	  }
+	  String message = new StringBuilder()
+	    .append("Objects are not equal.")
+	    .append(System.lineSeparator())
+	    .append("First object : ")
+	    .append(firstObj.toString())
+	    .append(System.lineSeparator())
+	    .append("Second object: ")
+	    .append(secondObj.toString())
+	    .toString();	  
+	  throw new IllegalArgumentException(message);
 	}
 	
 	public static boolean isSymbolValid(String symbol) {
-	    if (StringUtils.isEmpty(symbol)) return false;
-	    return symbol.matches("[a-zA-Z]*");
+	  if (StringUtils.isEmpty(symbol)) return false;
+	  return symbol.matches("[a-zA-Z]*");
 	}
-    
+  
 }
