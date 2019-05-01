@@ -1,17 +1,12 @@
 package stock;
 
-import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.IsoFields;
-import java.time.temporal.WeekFields;
-import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 
-import org.mockito.cglib.core.Local;
-
-import software.amazon.ion.impl.PrivateIonSystem;
 import util.CommonUtil;
 
 public class WeeklyCandle extends AbstractCandle {
@@ -84,4 +79,41 @@ public class WeeklyCandle extends AbstractCandle {
     this.close = this.dailyCandles.lastEntry().getValue().getClose();
     this.volume += candle.getVolume();    
   }
+  
+  /**
+   * Get standard deviation for the price based on volume estimate for daily candle.
+   */
+  public double getPriceStandardDeviation() {
+    Map<Double, Double> volumePercentageMap = new TreeMap<>();
+    for (DailyCandle dailyCandle : dailyCandles.values()) {
+      for (Map.Entry<Double, Double> entry : dailyCandle.getVolumeEstimate().entrySet()) {
+        double price = entry.getKey();
+        double volumePercentage = entry.getValue() / this.volume;
+        if (volumePercentageMap.containsKey(price)) {
+          volumePercentage += volumePercentageMap.get(price);          
+        }
+        volumePercentageMap.put(price, volumePercentage);
+      }
+    }
+    
+    int n = volumePercentageMap.size();
+    double weightedMean = volumePercentageMap
+        .entrySet()
+        .stream()
+        .map(entry -> entry.getKey() * entry.getValue())
+        .mapToDouble(d -> d)
+        .sum();
+    
+    double numerator = volumePercentageMap
+        .entrySet()
+        .stream()
+        .map(entry -> (entry.getKey() - weightedMean) * (entry.getKey() - weightedMean) * entry.getValue())        
+        .mapToDouble(d -> d)
+        .sum();
+    
+    // It is guaranteed that sum(value) = 1.
+    double denominator = (n - 1) * 1.0 / n;
+    
+    return Math.sqrt(numerator / denominator);
+  }  
 }

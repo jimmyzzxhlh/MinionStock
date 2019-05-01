@@ -22,6 +22,7 @@ import javax.print.DocFlavor.STRING;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 
 import org.apache.commons.lang.StringUtils;
 import org.hamcrest.MatcherAssert;
@@ -29,6 +30,7 @@ import org.hamcrest.MatcherAssert;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
+import com.google.common.collect.TreeBasedTable;
 
 import download.DownloadHelper;
 import download.tiingo.TiingoDailyData;
@@ -42,6 +44,8 @@ import stock.WeeklyCandle;
 import util.CommonUtil;
 
 public class Sanitize {
+  private static final String ORIGINAL_FILE_NAME = "data/EOD_20180119_original.csv";
+
   public static void main(String[] args) throws Exception {
     // splitAdjustedData();
     // writeAdjustedPriceFile();
@@ -54,8 +58,9 @@ public class Sanitize {
     // fixDecimalsForOriginalPrice();
     // checkDailyGap();
     // checkNormalGap();
-     verifyDailyGap();
+//     verifyDailyGap();
 //    fixDividendAndSplitBasedOnTiingo();
+    findOpenPriceSameAsHighPrice();
   }
 
   private static Table<String, String, Double> getSplits() throws Exception {
@@ -75,6 +80,7 @@ public class Sanitize {
     return splitsTable;
   }
 
+  /** Get dividends from the dividends file. */
   private static Table<String, String, Double> getDividends() throws Exception {
     Table<String, String, Double> dividendsTable = HashBasedTable.create();
     File dividendsFile = new File("data/EOD_20180119_dividend.csv");
@@ -106,19 +112,19 @@ public class Sanitize {
       while ((line = br.readLine()) != null) {
         System.out.println(line);
         String[] data = CommonUtil.splitCSVLine(line);
-        
+
         String matched = data[3];
         if (matched.equals("Y") || matched.equals("NA")) {
           continue;
         }
-        
+
         if (data.length >= 6) {
           String solution = data[5].toLowerCase();
           if (solution.contains("fixed") || solution.contains("no fix")) {
             continue;
           }
         }
-        
+
         String symbol = data[0];
         String dateStr = data[1];
 
@@ -128,15 +134,15 @@ public class Sanitize {
 
         LocalDate date = CommonUtil.parseDate(dateStr);
         List<TiingoDailyData> tiingoDailyDatas = DownloadHelper.downloadTiingoDailyData(symbol, date, date);
-        if (tiingoDailyDatas.size() == 0) {          
+        if (tiingoDailyDatas.size() == 0) {
           continue;
         }
         TiingoDailyData tiingoDailyData = tiingoDailyDatas.get(0);
         if (dividendsTable.contains(symbol, dateStr)) {
           double dividend = dividendsTable.get(symbol, dateStr);
           if (Math.abs(tiingoDailyData.getDivCash() - dividend) > 0.01) {
-             bwd.write(StringUtils.join(Arrays.asList(symbol, dateStr, dividend, tiingoDailyData.getDivCash()), ","));
-             bwd.newLine();
+            bwd.write(StringUtils.join(Arrays.asList(symbol, dateStr, dividend, tiingoDailyData.getDivCash()), ","));
+            bwd.newLine();
           }
         }
         if (splitsTable.contains(symbol, dateStr)) {
@@ -144,8 +150,8 @@ public class Sanitize {
           if (Math.abs(tiingoDailyData.getSplitFactor() - split) > 0.01) {
             bws.write(StringUtils.join(Arrays.asList(symbol, dateStr, split, tiingoDailyData.getSplitFactor()), ","));
             bws.newLine();
-          }  
-        }                 
+          }
+        }
       }
     }
   }
@@ -163,11 +169,88 @@ public class Sanitize {
     }
   }
 
-  private static void verifyDailyGap() throws Exception {
-    File gapFile = new File("data/EOD_20180119_adjusted_gap.csv");
-    File normalGapFile = new File("data/normal_gap.csv");
+  private static DailyCandle getDailyCandleFromLineData(String[] data) {
+    String dateStr = data[1];
+    double open = Double.valueOf(data[2]);
+    double high = Double.valueOf(data[3]);
+    double low = Double.valueOf(data[4]);
+    double close = Double.valueOf(data[5]);
+    long volume = Double.valueOf(data[6]).longValue();
+
+    DailyCandle dailyCandle = new DailyCandle().withDate(dateStr).withOpen(open).withHigh(high).withLow(low)
+        .withClose(close).withVolume(volume);
+
+    return dailyCandle;
+  }
+
+  private static TreeBasedTable<String, LocalDate, DailyCandle> getDailyCandlesTable(String fileName) throws Exception {
+    return getDailyCandlesTable(fileName, dailyCandle -> true);
+  }
+
+  /**
+   * Read a file with daily candles into a tree map. The file should have format
+   * of: Symbol,Date,Open,High,Low,Close,Volume
+   * 
+   * Also accept a predicate so that we can easily filter the candles.
+   */
+  private static TreeBasedTable<String, LocalDate, DailyCandle> getDailyCandlesTable(String fileName,
+      Predicate<DailyCandle> predicate) throws Exception {
+    TreeBasedTable<String, LocalDate, DailyCandle> table = TreeBasedTable.create();
+
+    File inputFile = new File(ORIGINAL_FILE_NAME);
+    try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
+      String line;
+      while ((line = br.readLine()) != null) {
+        String[] data = CommonUtil.splitCSVLine(line);
+        String symbol = data[0];
+        DailyCandle dailyCandle = getDailyCandleFromLineData(data);
+
+        if (predicate.test(dailyCandle)) {
+          table.put(symbol, dailyCandle.getDate(), dailyCandle);
+        }
+      }
+    }
+
+    return table;
+  }
+
+  /** 
+   * Fix the original price file based on the data in another file.
+   * Assume that the fix file has the same structure with the original price file, i.e.
+   * Symbol,Date,Open,High,Low,Close,Volume
+   */
+  private static void fixOriginalPrice(String fixFileName, String outputFileName) throws Exception {
+    Table<String, LocalDate, DailyCandle> fixTable = getDailyCandlesTable(fixFileName);
+    
+    try (
+        BufferedReader br = new BufferedReader(new FileReader(new File(ORIGINAL_FILE_NAME)));
+        BufferedWriter bw = new BufferedWriter(new FileWriter(new File(outputFileName)));) {
+      String line;
+      while ((line = br.readLine()) != null) {
+        String[] data = CommonUtil.splitCSVLine(line);
+        String symbol = data[0];
+        DailyCandle dailyCandle = getDailyCandleFromLineData(data);
+        if (fixTable.contains(symbol, dailyCandle.getDate())) {
+          bw.write(StringUtils.join(Arrays.asList(
+              symbol,
+              dailyCandle.getDateString(),
+              CommonUtil.formatPrice(dailyCandle.getOpen()),
+              CommonUtil.formatPrice(dailyCandle.getHigh()),
+              CommonUtil.formatPrice(dailyCandle.getLow()),
+              CommonUtil.formatPrice(dailyCandle.getClose()),
+              dailyCandle.getVolume()), ","));
+        }
+        else {
+          bw.write(line);
+        }
+        bw.newLine();
+      }
+    }
+  }
+
+  /** Get a map from symbol to information for the symbol from names.txt. */
+  private static Map<String, TreeSet<SymbolName>> getNamesMap() throws Exception {
     File namesFile = new File("D:\\Trading Data Converted\\names.txt");
-    File outputFile = new File("data/EOD_20180119_adjusted_gap_output_v2.csv");
 
     Map<String, TreeSet<SymbolName>> namesMap = new HashMap<>();
     try (BufferedReader br = new BufferedReader(new FileReader(namesFile));) {
@@ -198,7 +281,92 @@ public class Sanitize {
     }
 
     System.out.println(namesMap.size() + " symbol names found.");
+    return namesMap;
+  }
 
+  private static TreeMap<LocalDate, DailyCandle> getDailyCandlesFromNames(SymbolName symbolName) throws Exception {
+    TreeMap<LocalDate, DailyCandle> map = new TreeMap<>();
+
+    StringBuilder fullPathSb = new StringBuilder();
+    String fullPath = fullPathSb.append("D:\\Trading Data Converted\\").append(symbolName.path).append("\\")
+        .append(symbolName.symbolWithLastMonth).append(".csv").toString();
+
+    try (BufferedReader br = new BufferedReader(new FileReader(new File(fullPath)));) {
+      String line = br.readLine(); // Skip the first line.
+      while ((line = br.readLine()) != null) {
+        String[] data = CommonUtil.splitCSVLine(line);
+        DailyCandle dailyCandle = getDailyCandleFromLineData(data);
+        map.put(dailyCandle.getDate(), dailyCandle);
+      }
+    }
+
+    return map;
+  }
+
+  /** Find all prices that have open price equal to the high price */
+  private static void findOpenPriceSameAsHighPrice() throws Exception {
+    File outputFile = new File("data/EOD_20180119_open_same_as_high.csv");
+
+    System.out.println("Getting daily candles from original file ...");
+    TreeBasedTable<String, LocalDate, DailyCandle> dailyCandlesTable = getDailyCandlesTable(ORIGINAL_FILE_NAME,
+        dailyCandle -> {
+          return (Math.abs(dailyCandle.getOpen() - dailyCandle.getHigh()) < 1e-6)
+              && (dailyCandle.getClose() * dailyCandle.getVolume() > 1e6);
+        });
+    Map<String, TreeSet<SymbolName>> namesMap = getNamesMap();
+
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+      bw.write(
+          "Symbol,Date,OriginalOpen,OriginalHigh,OriginalLow,OriginalClose,NamesOpen,NamesHigh,NamesLow,NamesClose");
+      bw.newLine();
+      for (String symbol : dailyCandlesTable.rowKeySet()) {
+        System.out.println("Process symbol " + symbol + " ...");
+        if (!namesMap.containsKey(symbol)) {
+          continue;
+        }
+
+        // Since in names.txt, one symbol can contain multiple files, we need to read in
+        // all the
+        // data, and assume that the same symbol doesn't have duplicated candles on the
+        // same day.
+
+        TreeSet<SymbolName> names = namesMap.get(symbol);
+        TreeMap<LocalDate, DailyCandle> dailyCandlesMapFromNames = new TreeMap<>();
+        for (SymbolName name : names) {
+          // Merge all the daily candles under the same symbol, as we assume that no same
+          // day
+          // data exist.
+          dailyCandlesMapFromNames.putAll(getDailyCandlesFromNames(name));
+        }
+
+        // Now check each candle in the original, and compare it with the daily candles
+        // from names.
+        for (DailyCandle dailyCandle : dailyCandlesTable.row(symbol).values()) {
+          if (dailyCandlesMapFromNames.containsKey(dailyCandle.getDate())) {
+            DailyCandle dailyCandleFromNames = dailyCandlesMapFromNames.get(dailyCandle.getDate());
+            // If the candle from names doesn't have open price equal to high price, then
+            // it's
+            // potentially a problem.
+            if (Math.abs((dailyCandleFromNames.getOpen() - dailyCandleFromNames.getHigh())
+                / dailyCandleFromNames.getOpen()) > 0.005) {
+              bw.write(StringUtils.join(Arrays.asList(symbol, CommonUtil.formatDate(dailyCandle.getDate()),
+                  dailyCandle.getOpen(), dailyCandle.getHigh(), dailyCandle.getLow(), dailyCandle.getClose(),
+                  dailyCandleFromNames.getOpen(), dailyCandleFromNames.getHigh(), dailyCandleFromNames.getLow(),
+                  dailyCandleFromNames.getClose()), ","));
+              bw.newLine();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private static void verifyDailyGap() throws Exception {
+    File gapFile = new File("data/EOD_20180119_adjusted_gap.csv");
+    File normalGapFile = new File("data/normal_gap.csv");
+    File outputFile = new File("data/EOD_20180119_adjusted_gap_output_v2.csv");
+
+    Map<String, TreeSet<SymbolName>> namesMap = getNamesMap();
     Set<String> normalGapSet = new HashSet<>();
     try (BufferedReader br = new BufferedReader(new FileReader(normalGapFile));) {
       String line;
@@ -274,10 +442,10 @@ public class Sanitize {
                 bw.write(line + ",Y");
                 bw.newLine();
               } else if (close * volume < 1e8) {
-              	bw.write(line + ",Ignore");
-              	bw.newLine();
+                bw.write(line + ",Ignore");
+                bw.newLine();
               } else {
-              	bw.write(line + ",N," + gapCompare);
+                bw.write(line + ",N," + gapCompare);
                 bw.newLine();
               }
               break;
@@ -318,7 +486,7 @@ public class Sanitize {
   }
 
   private static void fixDecimalsForOriginalPrice() throws Exception {
-    File inputFile = new File("data/EOD_20180119_original.csv");
+    File inputFile = new File(ORIGINAL_FILE_NAME);
     File outputFile = new File("data/EOD_20180119_original_v2.csv");
 
     try (BufferedReader br = new BufferedReader(new FileReader(inputFile));
@@ -334,10 +502,9 @@ public class Sanitize {
         String lowStr = data[4];
         String closeStr = data[5];
         String volume = data[6];
-        bw.write(StringUtils.join(
-            Arrays.asList(symbol, date, getDecimalFixedString(openStr), getDecimalFixedString(highStr),
-                getDecimalFixedString(lowStr), getDecimalFixedString(closeStr), volume),
-            ","));
+        bw.write(
+            StringUtils.join(Arrays.asList(symbol, date, getDecimalFixedString(openStr), getDecimalFixedString(highStr),
+                getDecimalFixedString(lowStr), getDecimalFixedString(closeStr), volume), ","));
         bw.newLine();
       }
     }
@@ -359,7 +526,7 @@ public class Sanitize {
   }
 
   private static void fixOriginalPrice() throws Exception {
-    File inputFile = new File("data/EOD_20180119_original.csv");
+    File inputFile = new File(ORIGINAL_FILE_NAME);
     File fixFile = new File("data/data_to_be_fixed.csv");
     File outputFile = new File("data/EOD_20180119_original_v2.csv");
 
@@ -412,11 +579,11 @@ public class Sanitize {
   /**
    * Filter features that do not have a sufficient amount of turnover. The
    * standard is: 1. Symbol should be valid (Only letters). 2. Current week's
-   * close price should be > 1.0 3. Current week's volume * close price should
-   * be > 1 million. 4. EMA4 > EMA12 > EMA26 > EMA52 (> Current week's close?)
-   * Notice that the filter should not do anything with predicting the price,
-   * otherwise we would get a system that performs super well on the training
-   * data and very bad on the real data.
+   * close price should be > 1.0 3. Current week's volume * close price should be
+   * > 1 million. 4. EMA4 > EMA12 > EMA26 > EMA52 (> Current week's close?) Notice
+   * that the filter should not do anything with predicting the price, otherwise
+   * we would get a system that performs super well on the training data and very
+   * bad on the real data.
    * 
    * @throws Exception
    */
@@ -466,11 +633,11 @@ public class Sanitize {
 
   /**
    * Write the following features given an adjusted price file - (Weekly Close
-   * Price / X week EMA) - 1 X = 4, 12, 26, 52 This shows the distance between
-   * the current close price and the corrsponding EMA, in percentage w.r.t
-   * EMA. - (Current X week EMA / Previous X week EMA) - 1 X = 4, 12, 26, 52
-   * This is basically the slope of the EMA line which shows the trend of EMA.
-   * - Current week body length, upper length, lower length in percentage.
+   * Price / X week EMA) - 1 X = 4, 12, 26, 52 This shows the distance between the
+   * current close price and the corrsponding EMA, in percentage w.r.t EMA. -
+   * (Current X week EMA / Previous X week EMA) - 1 X = 4, 12, 26, 52 This is
+   * basically the slope of the EMA line which shows the trend of EMA. - Current
+   * week body length, upper length, lower length in percentage.
    * 
    * Also exclude symbols that we do not care about.
    * 
@@ -553,8 +720,7 @@ public class Sanitize {
             if (week != currentWeek + 1 && !(week == 1 && year == currentYear + 1)) {
               // If the week is skipped, flush the current weekly
               // candles.
-              bwError.write(
-                  String.format("%s,%d,%d,%d,%d", symbol, currentWeek, currentYear, week, year));
+              bwError.write(String.format("%s,%d,%d,%d,%d", symbol, currentWeek, currentYear, week, year));
               bwError.newLine();
               writeWeeklyEmaToFile(symbol, weeklyCandles, bw);
               weeklyCandles = new TreeMap<>();
@@ -600,10 +766,8 @@ public class Sanitize {
 
     TreeMap<LocalDateTime, Double> emaDistFourWeeks = Calculator.getEmaDistance(weeklyCandles, emaFourWeeks);
     TreeMap<LocalDateTime, Double> emaDistTwelveWeeks = Calculator.getEmaDistance(weeklyCandles, emaTwelveWeeks);
-    TreeMap<LocalDateTime, Double> emaDistTwentySixWeeks = Calculator.getEmaDistance(weeklyCandles,
-        emaTwentySixWeeks);
-    TreeMap<LocalDateTime, Double> emaDistFiftyTwoWeeks = Calculator.getEmaDistance(weeklyCandles,
-        emaFiftyTwoWeeks);
+    TreeMap<LocalDateTime, Double> emaDistTwentySixWeeks = Calculator.getEmaDistance(weeklyCandles, emaTwentySixWeeks);
+    TreeMap<LocalDateTime, Double> emaDistFiftyTwoWeeks = Calculator.getEmaDistance(weeklyCandles, emaFiftyTwoWeeks);
 
     TreeMap<LocalDateTime, Double> emaSlopeFourWeeks = Calculator.getEmaSlope(emaFourWeeks);
     TreeMap<LocalDateTime, Double> emaSlopeTwelveWeeks = Calculator.getEmaSlope(emaTwelveWeeks);
@@ -617,8 +781,7 @@ public class Sanitize {
 
     TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossFourWeeks = Calculator.getProfitAndLoss(weeklyCandles, 4);
     TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossTwelveWeeks = Calculator.getProfitAndLoss(weeklyCandles, 12);
-    TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossTwentySixWeeks = Calculator.getProfitAndLoss(weeklyCandles,
-        26);
+    TreeMap<LocalDateTime, ProfitAndLoss> profitAndLossTwentySixWeeks = Calculator.getProfitAndLoss(weeklyCandles, 26);
 
     // Print out the time range for which we have all the features and
     // targets.
@@ -651,18 +814,15 @@ public class Sanitize {
           // emaTwelveWeeks.get(dateTime),
           // emaTwentySixWeeks.get(dateTime),
           // emaFiftyTwoWeeks.get(dateTime),
-          emaDistFourWeeks.get(dateTime), emaDistTwelveWeeks.get(dateTime),
-          emaDistTwentySixWeeks.get(dateTime), emaDistFiftyTwoWeeks.get(dateTime),
-          emaSlopeFourWeeks.get(dateTime), emaSlopeTwelveWeeks.get(dateTime),
-          emaSlopeTwentySixWeeks.get(dateTime), emaSlopeFiftyTwoWeeks.get(dateTime),
-          volumeFourWeeks.get(dateTime), volumeTwelveWeeks.get(dateTime), volumeTwentySixWeeks.get(dateTime),
-          volumeFiftyTwoWeeks.get(dateTime), profitAndLossFourWeeks.get(dateTime).getProfit(),
-          profitAndLossTwelveWeeks.get(dateTime).getProfit(),
-          profitAndLossTwentySixWeeks.get(dateTime).getProfit(),
-          profitAndLossFourWeeks.get(dateTime).getLoss(), profitAndLossTwelveWeeks.get(dateTime).getLoss(),
-          profitAndLossTwentySixWeeks.get(dateTime).getLoss(), weeklyCandles.get(dateTime).getClose(),
-          weeklyCandles.get(dateTime).getVolume(), emaFourWeeks.get(dateTime), emaTwelveWeeks.get(dateTime),
-          emaTwentySixWeeks.get(dateTime), emaFiftyTwoWeeks.get(dateTime)), ","));
+          emaDistFourWeeks.get(dateTime), emaDistTwelveWeeks.get(dateTime), emaDistTwentySixWeeks.get(dateTime),
+          emaDistFiftyTwoWeeks.get(dateTime), emaSlopeFourWeeks.get(dateTime), emaSlopeTwelveWeeks.get(dateTime),
+          emaSlopeTwentySixWeeks.get(dateTime), emaSlopeFiftyTwoWeeks.get(dateTime), volumeFourWeeks.get(dateTime),
+          volumeTwelveWeeks.get(dateTime), volumeTwentySixWeeks.get(dateTime), volumeFiftyTwoWeeks.get(dateTime),
+          profitAndLossFourWeeks.get(dateTime).getProfit(), profitAndLossTwelveWeeks.get(dateTime).getProfit(),
+          profitAndLossTwentySixWeeks.get(dateTime).getProfit(), profitAndLossFourWeeks.get(dateTime).getLoss(),
+          profitAndLossTwelveWeeks.get(dateTime).getLoss(), profitAndLossTwentySixWeeks.get(dateTime).getLoss(),
+          weeklyCandles.get(dateTime).getClose(), weeklyCandles.get(dateTime).getVolume(), emaFourWeeks.get(dateTime),
+          emaTwelveWeeks.get(dateTime), emaTwentySixWeeks.get(dateTime), emaFiftyTwoWeeks.get(dateTime)), ","));
       bw.newLine();
     }
   }
@@ -718,7 +878,7 @@ public class Sanitize {
    * adjusted price file.
    */
   private static void writeAdjustedPriceFile() throws Exception {
-    File originalFile = new File("data/EOD_20180119_original.csv");
+    File originalFile = new File(ORIGINAL_FILE_NAME);
     File dividendFile = new File("data/EOD_20180119_dividend.csv");
     File splitFile = new File("data/EOD_20180119_split.csv");
     File adjustedFile = new File("data/EOD_20180119_adjusted.csv");
@@ -789,8 +949,7 @@ public class Sanitize {
 
       System.out.println(lastSymbol);
       // Handle the last symbol.
-      TreeSet<DailyCandle> outputCandles = calculateAdjustedPrice(lastSymbol, inputCandles, dividendTable,
-          splitTable);
+      TreeSet<DailyCandle> outputCandles = calculateAdjustedPrice(lastSymbol, inputCandles, dividendTable, splitTable);
       writeAdjustedPriceForSymbol(lastSymbol, outputCandles, bwAdjusted);
     }
   }
@@ -810,8 +969,7 @@ public class Sanitize {
 
       DailyCandle adjustedCandle = new DailyCandle().withDate(date).withOpen(candle.getOpen() * priceFactor)
           .withHigh(candle.getHigh() * priceFactor).withLow(candle.getLow() * priceFactor)
-          .withClose(candle.getClose() * priceFactor)
-          .withVolume(Math.round(candle.getVolume() * volumeFactor));
+          .withClose(candle.getClose() * priceFactor).withVolume(Math.round(candle.getVolume() * volumeFactor));
       outputCandles.add(adjustedCandle);
 
       // If there is a dividend or a split found, apply the factor to all
@@ -833,8 +991,8 @@ public class Sanitize {
   private static void writeAdjustedPriceForSymbol(String symbol, TreeSet<DailyCandle> candles, BufferedWriter bw)
       throws Exception {
     for (DailyCandle candle : candles) {
-      String output = StringUtils.join(Arrays.asList(symbol, candle.getDateString(), candle.getOpen(),
-          candle.getHigh(), candle.getLow(), candle.getClose(), candle.getVolume()), ",");
+      String output = StringUtils.join(Arrays.asList(symbol, candle.getDateString(), candle.getOpen(), candle.getHigh(),
+          candle.getLow(), candle.getClose(), candle.getVolume()), ",");
       bw.write(output);
       bw.newLine();
     }
@@ -842,7 +1000,7 @@ public class Sanitize {
 
   private static void splitAdjustedData() throws Exception {
     File inputFile = new File("data/EOD_20180119_div_split_fixed.csv");
-    File originalFile = new File("data/EOD_20180119_original.csv");
+    File originalFile = new File(ORIGINAL_FILE_NAME);
     File dividendFile = new File("data/EOD_20180119_dividend.csv");
     File splitFile = new File("data/EOD_20180119_split.csv");
 

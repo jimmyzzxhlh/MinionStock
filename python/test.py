@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 sns.set(color_codes=True)
-data_set = pd.read_csv('../data/spy_volatility_crossweek.csv')
-sns.distplot(data_set)
+data_set = pd.read_csv('../data/spy_volatility_features.csv')
+sns.distplot(data_set['ST1'])
 
 plt.show()

@@ -1,5 +1,6 @@
 package util;
 
+import java.text.DecimalFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ public class CommonUtil {
 	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 	private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss Z");
+	private static final DecimalFormat priceFormatter = new DecimalFormat("#.00");
 	private static final HolidayManager holidayManager = HolidayManager.getInstance(HolidayCalendar.UNITED_STATES);
 	public static final ZoneId PACIFIC_ZONE_ID = ZoneId.of("America/Los_Angeles");
 	
@@ -36,6 +38,10 @@ public class CommonUtil {
 	
 	public static String formatDate(LocalDate date) {
 	  return date.format(dateFormatter);
+	}
+	
+	public static String formatPrice(double price) {
+	  return priceFormatter.format(price);
 	}
 	
 	public static boolean isMarketClosedToday() {

@@ -6,7 +6,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -14,6 +17,12 @@ import stock.DailyCandle;
 import stock.WeeklyCandle;
 import util.CommonUtil;
 
+/**
+ * Features that I could possibly explore to predict the next candle volatility:
+ * - Volatility for the current 4 weekly candles
+ * - Standard deviation of the weekly 4 candles
+ * - Volume percentage of the current 4 weekly candles
+ */
 public class SpyAnalysis {
   private static String INPUT_FILE_NAME = "data/spy.csv";
   private static String ADJUSTED_PRICE_FILE_NAME = "data/spy_adjusted.csv";
@@ -21,12 +30,125 @@ public class SpyAnalysis {
   private static String DIVIDEND_FILE_NAME = "data/spy_dividend.csv";
   private static String VOLATILITY_INTRAWEEK_FILE_NAME = "data/spy_volatility_intraweek.csv";
   private static String VOLATILITY_CROSSWEEK_FILE_NAME = "data/spy_volatility_crossweek.csv";
+  private static String VOLATILITY_NEXT_WEEK_LOW_FILE_NAME = "data/spy_volatility_next_week_low.csv";
+  private static String VOLATILITY_FEATURES_FILE_NAME = "data/spy_volatility_features.csv";
 
   public static void main(String[] args) {
-    writeVolatilityCrossWeekFile();
+    writeVolatilityFeatures();
   }
 
-  private static void writeWeeklyCandleFile() {
+  /**
+   * Current best result: 
+   * low: 503
+   * high: 101
+   * low percentage: 0.8327814569536424
+   */
+  private static void writeVolatilityFeatures() {
+    TreeMap<String, WeeklyCandle> candlesMap = getSpyWeeklyCandlesFromDailyFile();
+    
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(VOLATILITY_FEATURES_FILE_NAME)))) {
+      bw.write("Date,Volatility,NextCandleVolatility,NextCandleResult");
+      bw.newLine();
+      Deque<WeeklyCandle> queue = new LinkedList<>();
+      Iterator<WeeklyCandle> it = candlesMap.values().iterator();
+      while (queue.size() < 4) {
+        queue.add(it.next());
+      }
+      int lowVolatilityCount = 0;
+      int highVolatilityCount = 0;
+      while (it.hasNext()) {
+        WeeklyCandle nextCandle = it.next();
+        double nextCandleVolatility = getVolatility(nextCandle);
+        
+        if (Math.abs(nextCandleVolatility) <= 3) {
+          queue.poll();
+          queue.offer(nextCandle);
+          continue;
+        }
+        WeeklyCandle lastCandle = queue.peekLast();
+        
+        if (Math.abs(getVolatility(lastCandle)) <= 2.5) {
+          
+          bw.write(CommonUtil.formatDate(
+              lastCandle.getDateTime().toLocalDate()) +
+              "," +
+              getVolatility(lastCandle) +
+              "," +
+              nextCandleVolatility +
+              ",");
+          
+//          for (WeeklyCandle candle : queue) {
+//            bw.write(getVolatility(candle) + "," + candle.getPriceStandardDeviation() + ",");
+//          }
+          
+          if (Math.abs(nextCandleVolatility) <= 3) {
+            bw.write("1");
+            lowVolatilityCount++;
+          }
+          else {
+            bw.write("0");
+            highVolatilityCount++;
+          }
+          bw.newLine();
+        }
+        queue.poll();
+        queue.offer(nextCandle);
+      }
+      System.out.println("low: " + lowVolatilityCount);
+      System.out.println("high: " + highVolatilityCount);
+      System.out.println("low percentage: " + lowVolatilityCount * 1.0 / (lowVolatilityCount + highVolatilityCount));
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+    }
+
+  }
+  
+  private static double getVolatility(WeeklyCandle weeklyCandle) {
+    double volatility = (weeklyCandle.getHigh() - weeklyCandle.getLow()) / weeklyCandle.getOpen() * 100;
+    if (weeklyCandle.isWhiteCandle()) {
+      return volatility;
+    }
+    else {
+      return -volatility;
+    }
+  }
+  
+  /**
+   * Interesting finding from this one:
+   * If next week's volatility is low (<= 2%), almost all previous weekly candle volatility is <= 5%.
+   * If next week's volatility is very low (<= 2%), almost all previous weekly candle volatility is <= 4%, all previous weekly candle volatility
+   * should be <= 6.5 ish
+   * 
+   */
+  private static void writeVolatilityIfNextWeekVolatilityIsLow() {
+    TreeMap<String, WeeklyCandle> candlesMap = getSpyWeeklyCandles();
+
+    try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(VOLATILITY_NEXT_WEEK_LOW_FILE_NAME)))) {
+      bw.write("VolatilityIfNextWeekVolatilityIsLow");
+      bw.newLine();
+      WeeklyCandle previousCandle = null;
+      double previousVolatility = 0;
+      for (WeeklyCandle candle : candlesMap.values()) {
+        double volatility = Math.max(candle.getHigh() - candle.getOpen(), candle.getOpen() - candle.getClose()) / candle.getOpen() * 100;
+        if (previousCandle == null) {
+          previousCandle = candle;
+          previousVolatility = volatility;
+          continue;
+        }
+        if (volatility <= 1) {
+          bw.write(String.valueOf(previousVolatility));
+          bw.newLine();
+        }
+        previousCandle = candle;
+        previousVolatility = volatility;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+  
+  private static TreeMap<String, WeeklyCandle> getSpyWeeklyCandlesFromDailyFile() {
     TreeMap<String, DailyCandle> dailyCandlesMap = getSpyAdjustedDailyCandles();
 
     TreeMap<String, WeeklyCandle> weeklyCandlesMap = new TreeMap<>();
@@ -44,6 +166,11 @@ public class SpyAnalysis {
     }
 
     weeklyCandlesMap.put(CommonUtil.formatDate(currentWeeklyCandle.getDateTime().toLocalDate()), currentWeeklyCandle);
+    return weeklyCandlesMap;
+  }
+  
+  private static void writeWeeklyCandleFile() {
+    TreeMap<String, WeeklyCandle> weeklyCandlesMap = getSpyWeeklyCandlesFromDailyFile();
 
     try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(ADJUSTED_PRICE_WEEKLY_FILE_NAME)))) {
       for (Map.Entry<String, WeeklyCandle> entry : weeklyCandlesMap.entrySet()) {

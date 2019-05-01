@@ -1,8 +1,8 @@
 package stock;
 
 import java.time.LocalDateTime;
-
-import org.joda.time.DateTime;
+import java.util.Map;
+import java.util.TreeMap;
 
 import enums.StockEnum.CandleDataType;
 
@@ -92,6 +92,66 @@ public abstract class AbstractCandle {
    */
   public double getLowerShadowLength() {
     return close > open ? open - low : close - low;
+  }
+  
+  /**
+   * Return an estimate of the volume map of a candle. Basically, the shadows are traversed twice so they should have
+   * double weight of the body. 
+   *  
+   * Assuming:
+   * x = Percentage of upper shadow length w.r.t the total length.
+   * y = Percentage of lower shadow length w.r.t the total length.
+   * Therefore percentage of body length is 1 - x - y.
+   * Let:
+   * a = the weight for the shadow length.
+   * b = the weight for the body length.
+   * 0.1 = the weight for the open/close price point. These tend to have many more volumes than other price. 
+   * We have
+   * a = 2b 
+   * x * a + y * a + (1 - x - y) * b + 0.1 * 2 = 1
+   * Then we can denote that
+   * a = 0.8 / (x + y + 1) 
+   * b = 1.6 / (x + y + 1)
+   * 
+   * The returned map will contain 301 entries where 100 is for each shadow length, 99 is for body length (since open and close
+   * prices need to be excluded), and 2 for open and close price.
+   */
+  public Map<Double, Double> getVolumeEstimate() {
+    Map<Double, Double> volumeMap = new TreeMap<>();
+    double lowerShadowLength = getLowerShadowLength();
+    double upperShadowLength = getUpperShadowLength();
+    double bodyLength = getBodyLength();
+    double totalLength = getTotalLength();
+    
+    double lowerShadowPercentage = lowerShadowLength / totalLength;
+    double upperShadowPercentage = upperShadowLength / totalLength;
+    double bodyPercentage = bodyLength / totalLength;
+    
+    double denominator = lowerShadowPercentage + upperShadowPercentage + 1.0;
+    double shadowWeight = 1.6 / denominator;
+    double bodyWeight = 0.8 / denominator;
+    double openCloseWeight = 0.1;
+    
+    // Add open and close price to the map
+    volumeMap.put(open, volume * openCloseWeight);
+    volumeMap.put(close,  volume * openCloseWeight);
+    
+    // Add lower shadow
+    for (double price = low; price < Math.min(open, close) - 1e-5; price += lowerShadowLength / 100.0) {
+      volumeMap.put(price, volume / 100.0 * lowerShadowPercentage * shadowWeight);
+    }
+    
+    // Add upper shadow
+    for (double price = high; price > Math.max(open, close) + 1e-5; price -= upperShadowLength / 100.0) {
+      volumeMap.put(price, volume / 100.0 * upperShadowPercentage * shadowWeight);
+    }
+    
+    // Add body
+    for (double price = Math.min(open, close) + bodyLength / 100.0; price < Math.max(open, close) - 1e-5; price += bodyLength / 100.0) {
+      volumeMap.put(price, volume / 99.0 * bodyPercentage * bodyWeight);
+    }
+    
+    return volumeMap;
   }
   
   @Override
